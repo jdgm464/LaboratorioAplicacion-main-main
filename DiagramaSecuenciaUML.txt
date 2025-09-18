@@ -1,0 +1,189 @@
+DIAGRAMA DE SECUENCIA UML - SISTEMA DE LABORATORIO
+=====================================================
+
+[Usuario]     [InterfazPrincipal]     [VentanaOrdenes]     [VentanaDetallesOrdenes]     [Base de Datos]
+    |                |                       |                        |                        |
+    |--iniciar()---->|                       |                        |                        |
+    |                |--mostrar()----------->|                        |                        |
+    |                |<--interfaz visible----|                        |                        |
+    |                |                       |                        |                        |
+    |--clic Órdenes->|                       |                        |                        |
+    |                |--new VentanaOrdenes()>|                        |                        |
+    |                |--mostrar()----------->|                        |                        |
+    |                |                       |<--ventana visible------|                        |
+    |                |                       |                        |                        |
+    |--clic Nuevo--->|                       |                        |                        |
+    |                |                       |--new VentanaDetalles()>|                        |
+    |                |                       |--mostrar()------------>|                        |
+    |                |                       |                        |<--formulario visible----|
+    |                |                       |                        |                        |
+    |--llenar datos->|                       |                        |                        |
+    |                |                       |                        |                        |
+    |--clic Guardar->|                       |                        |                        |
+    |                |                       |                        |--guardarOrden(datos)--->|
+    |                |                       |                        |<--confirmación----------|
+    |                |                       |                        |                        |
+    |                |                       |                        |--mostrar éxito--------->|
+    |                |                       |                        |                        |
+
+=====================================================
+
+[Usuario]     [InterfazPrincipal]     [VentanaPacientes]     [Base de Datos]
+    |                |                       |                        |
+    |--clic Pacientes>|                       |                        |
+    |                |--new VentanaPacientes()>|                        |
+    |                |--mostrar()------------>|                        |
+    |                |                       |<--ventana visible------|
+    |                |                       |                        |
+    |--clic Nuevo---->|                       |                        |
+    |                |                       |--mostrar formulario--->|
+    |                |                       |                        |
+    |--llenar datos->|                       |                        |
+    |                |                       |                        |
+    |--clic Guardar->|                       |                        |
+    |                |                       |--guardarPaciente()---->|
+    |                |                       |<--confirmación---------|
+    |                |                       |                        |
+    |                |                       |--mostrar éxito-------->|
+
+=====================================================
+
+[Usuario]     [InterfazPrincipal]     [VentanaResultados]     [Base de Datos]
+    |                |                       |                        |
+    |--clic Resultados>|                       |                        |
+    |                |--new VentanaResultados()>|                        |
+    |                |--mostrar()------------>|                        |
+    |                |                       |<--ventana visible------|
+    |                |                       |                        |
+    |--seleccionar orden>|                       |                        |
+    |                |                       |--obtenerOrden()------->|
+    |                |                       |<--datos orden----------|
+    |                |                       |                        |
+    |--ingresar resultados>|                       |                        |
+    |                |                       |                        |
+    |--clic Guardar-->|                       |                        |
+    |                |                       |--guardarResultados()-->|
+    |                |                       |<--confirmación---------|
+    |                |                       |                        |
+    |                |                       |--mostrar éxito-------->|
+
+=====================================================
+
+FLUJO COMPLETO: ORDEN -> PACIENTE -> RESULTADOS
+=====================================================
+
+[Usuario]     [VentanaOrdenes]     [VentanaDetallesOrdenes]     [Base de Datos]     [VentanaResultados]
+    |                |                        |                        |                        |
+    |--crear orden-->|                        |                        |                        |
+    |                |--abrir formulario----->|                        |                        |
+    |                |                        |<--formulario visible---|                        |
+    |                |                        |                        |                        |
+    |--seleccionar paciente>|                        |                        |                        |
+    |                |                        |--obtenerPaciente()---->|                        |
+    |                |                        |<--datos paciente-------|                        |
+    |                |                        |                        |                        |
+    |--agregar exámenes>|                        |                        |                        |
+    |                |                        |                        |                        |
+    |--clic Guardar-->|                        |                        |                        |
+    |                |                        |--guardarOrden()------->|                        |
+    |                |                        |<--confirmación---------|                        |
+    |                |                        |                        |                        |
+    |--abrir resultados>|                        |                        |                        |
+    |                |                        |                        |--obtenerOrdenesPendientes()>|
+    |                |                        |                        |<--lista órdenes----------|
+    |                |                        |                        |                        |
+    |--seleccionar orden>|                        |                        |                        |
+    |                |                        |                        |--obtenerDetallesOrden()>|
+    |                |                        |                        |<--detalles orden---------|
+    |                |                        |                        |                        |
+    |--ingresar resultados>|                        |                        |                        |
+    |                |                        |                        |                        |
+    |--clic Finalizar>|                        |                        |                        |
+    |                |                        |                        |--finalizarResultados()>|
+    |                |                        |                        |<--confirmación----------|
+    |                |                        |                        |                        |
+    |                |                        |                        |--mostrar finalización-->|
+
+=====================================================
+
+CASOS DE USO ESPECIALES
+=====================================================
+
+BÚSQUEDA Y MODIFICACIÓN:
+[Usuario]     [VentanaOrdenes]     [Base de Datos]
+    |                |                        |
+    |--clic Buscar-->|                        |
+    |                |--mostrar búsqueda----->|
+    |                |                        |
+    |--ingresar criterio>|                        |
+    |                |--buscarOrdenes()------>|
+    |                |<--resultados-----------|
+    |                |                        |
+    |                |--mostrar resultados-->|
+
+IMPRESIÓN Y REPORTES:
+[Usuario]     [VentanaOrdenes]     [Base de Datos]     [Sistema]
+    |                |                        |                        |
+    |--clic Imprimir>|                        |                        |
+    |                |--obtenerDatosOrden()-->|                        |
+    |                |<--datos completos------|                        |
+    |                |                        |                        |
+    |                |--generarPDF()--------->|                        |
+    |                |                        |<--PDF generado----------|
+    |                |                        |                        |
+    |                |--abrir visor PDF------>|                        |
+
+=====================================================
+
+VALIDACIONES Y CONTROL DE ERRORES
+=====================================================
+
+VALIDACIÓN DE DATOS:
+[Usuario]     [VentanaDetallesOrdenes]     [Sistema]
+    |                        |                        |
+    |--intentar guardar incompleto>|                        |
+    |                        |--validarDatos()-------->|
+    |                        |<--error validación------|
+    |                        |                        |
+    |                        |--mostrar mensaje error->|
+
+CONTROL DE ACCESO:
+[Usuario]     [InterfazPrincipal]     [Sistema]
+    |                |                        |
+    |--acceso restringido>|                        |
+    |                |--verificarPermisos()-->|
+    |                |<--acceso denegado------|
+    |                |                        |
+    |                |--deshabilitar botón-->|
+
+=====================================================
+
+CIERRE DE MÓDULOS
+=====================================================
+
+[Usuario]     [VentanaDetallesOrdenes]     [Sistema]
+    |                        |                        |
+    |--clic Cerrar-->|                        |
+    |                |--dispose()------------>|
+    |                |                        |
+    |                |--cerrar ventana------>|
+
+[Usuario]     [VentanaOrdenes]     [Sistema]
+    |                |                        |
+    |--clic Salir-->|                        |
+    |                |--dispose()------------>|
+    |                |                        |
+    |                |--cerrar ventana------>|
+
+=====================================================
+
+NOTAS DEL DIAGRAMA:
+=====================================================
+
+- Las flechas sólidas (--) representan llamadas de método
+- Las flechas punteadas (<--) representan respuestas/retornos
+- Los rectángulos representan objetos/instancias de clase
+- Las líneas de vida muestran el tiempo de existencia de cada objeto
+- Los mensajes están numerados secuencialmente
+- Los activadores muestran cuando un objeto está procesando un mensaje
+- Las notas explican casos especiales o validaciones

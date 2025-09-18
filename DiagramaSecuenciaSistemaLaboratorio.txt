@@ -1,0 +1,187 @@
+DIAGRAMA DE SECUENCIA - SISTEMA DE LABORATORIO MABEROCA
+================================================================
+
+ACTORES Y MÓDULOS:
+- Usuario (Administrador/Usuario)
+- InterfazPrincipal
+- VentanaOrdenes
+- VentanaPacientes  
+- VentanaResultados
+- VentanaDetallesOrdenes
+- Base de Datos (futura implementación)
+
+================================================================
+
+SECUENCIA PRINCIPAL DEL SISTEMA:
+================================================================
+
+1. INICIO DEL SISTEMA
+Usuario -> InterfazPrincipal: Inicia aplicación
+InterfazPrincipal -> InterfazPrincipal: mostrar()
+InterfazPrincipal -> Usuario: Muestra interfaz principal
+
+2. NAVEGACIÓN A MÓDULO ÓRDENES
+Usuario -> InterfazPrincipal: Clic en botón "Órdenes"
+InterfazPrincipal -> VentanaOrdenes: new VentanaOrdenes()
+InterfazPrincipal -> VentanaOrdenes: mostrar()
+VentanaOrdenes -> Usuario: Muestra ventana de órdenes
+
+3. GESTIÓN DE ÓRDENES
+Usuario -> VentanaOrdenes: Clic en "Nuevo"
+VentanaOrdenes -> VentanaDetallesOrdenes: new VentanaDetallesOrdenes()
+VentanaOrdenes -> VentanaDetallesOrdenes: mostrar()
+VentanaDetallesOrdenes -> Usuario: Muestra formulario de nueva orden
+
+Usuario -> VentanaDetallesOrdenes: Llena datos de la orden
+Usuario -> VentanaDetallesOrdenes: Clic en "Guardar"
+VentanaDetallesOrdenes -> Base de Datos: guardarOrden(datos)
+Base de Datos -> VentanaDetallesOrdenes: confirmación
+VentanaDetallesOrdenes -> Usuario: Muestra mensaje de éxito
+
+4. NAVEGACIÓN A MÓDULO PACIENTES
+Usuario -> InterfazPrincipal: Clic en botón "Pacientes"
+InterfazPrincipal -> VentanaPacientes: new VentanaPacientes()
+InterfazPrincipal -> VentanaPacientes: mostrar()
+VentanaPacientes -> Usuario: Muestra ventana de pacientes
+
+5. GESTIÓN DE PACIENTES
+Usuario -> VentanaPacientes: Clic en "Nuevo Paciente"
+VentanaPacientes -> Usuario: Muestra formulario de paciente
+Usuario -> VentanaPacientes: Llena datos del paciente
+Usuario -> VentanaPacientes: Clic en "Guardar"
+VentanaPacientes -> Base de Datos: guardarPaciente(datos)
+Base de Datos -> VentanaPacientes: confirmación
+VentanaPacientes -> Usuario: Muestra mensaje de éxito
+
+6. NAVEGACIÓN A MÓDULO RESULTADOS
+Usuario -> InterfazPrincipal: Clic en botón "Resultados"
+InterfazPrincipal -> VentanaResultados: new VentanaResultados()
+InterfazPrincipal -> VentanaResultados: mostrar()
+VentanaResultados -> Usuario: Muestra ventana de resultados
+
+7. GESTIÓN DE RESULTADOS
+Usuario -> VentanaResultados: Selecciona orden existente
+VentanaResultados -> Base de Datos: obtenerOrden(numeroOrden)
+Base de Datos -> VentanaResultados: datos de la orden
+VentanaResultados -> Usuario: Muestra datos de la orden
+
+Usuario -> VentanaResultados: Ingresa resultados de exámenes
+Usuario -> VentanaResultados: Clic en "Guardar Resultados"
+VentanaResultados -> Base de Datos: guardarResultados(datos)
+Base de Datos -> VentanaResultados: confirmación
+VentanaResultados -> Usuario: Muestra mensaje de éxito
+
+8. FLUJO COMPLETO: ORDEN -> PACIENTE -> RESULTADOS
+Usuario -> VentanaOrdenes: Crea nueva orden
+VentanaOrdenes -> VentanaDetallesOrdenes: Abre formulario de orden
+Usuario -> VentanaDetallesOrdenes: Selecciona paciente existente
+VentanaDetallesOrdenes -> Base de Datos: obtenerPaciente(idPaciente)
+Base de Datos -> VentanaDetallesOrdenes: datos del paciente
+VentanaDetallesOrdenes -> Usuario: Muestra datos del paciente
+
+Usuario -> VentanaDetallesOrdenes: Agrega exámenes a la orden
+Usuario -> VentanaDetallesOrdenes: Clic en "Guardar Orden"
+VentanaDetallesOrdenes -> Base de Datos: guardarOrden(ordenCompleta)
+Base de Datos -> VentanaDetallesOrdenes: confirmación
+
+Usuario -> VentanaResultados: Abre módulo de resultados
+VentanaResultados -> Base de Datos: obtenerOrdenesPendientes()
+Base de Datos -> VentanaResultados: lista de órdenes
+VentanaResultados -> Usuario: Muestra lista de órdenes
+
+Usuario -> VentanaResultados: Selecciona orden para resultados
+VentanaResultados -> Base de Datos: obtenerDetallesOrden(numeroOrden)
+Base de Datos -> VentanaResultados: detalles de la orden
+VentanaResultados -> Usuario: Muestra formulario de resultados
+
+Usuario -> VentanaResultados: Ingresa valores de exámenes
+Usuario -> VentanaResultados: Clic en "Finalizar Resultados"
+VentanaResultados -> Base de Datos: finalizarResultados(resultados)
+Base de Datos -> VentanaResultados: confirmación
+VentanaResultados -> Usuario: Muestra mensaje de finalización
+
+================================================================
+
+CASOS DE USO ESPECIALES:
+================================================================
+
+9. BÚSQUEDA Y MODIFICACIÓN
+Usuario -> VentanaOrdenes: Clic en "Buscar"
+VentanaOrdenes -> Usuario: Muestra campo de búsqueda
+Usuario -> VentanaOrdenes: Ingresa criterio de búsqueda
+VentanaOrdenes -> Base de Datos: buscarOrdenes(criterio)
+Base de Datos -> VentanaOrdenes: resultados de búsqueda
+VentanaOrdenes -> Usuario: Muestra lista de órdenes encontradas
+
+Usuario -> VentanaOrdenes: Selecciona orden para modificar
+VentanaOrdenes -> VentanaDetallesOrdenes: abrirOrden(numeroOrden)
+VentanaDetallesOrdenes -> Base de Datos: obtenerOrden(numeroOrden)
+Base de Datos -> VentanaDetallesOrdenes: datos de la orden
+VentanaDetallesOrdenes -> Usuario: Muestra formulario con datos
+
+10. IMPRESIÓN Y REPORTES
+Usuario -> VentanaOrdenes: Clic en "Imprimir"
+VentanaOrdenes -> Base de Datos: obtenerDatosOrden(numeroOrden)
+Base de Datos -> VentanaOrdenes: datos completos de la orden
+VentanaOrdenes -> Sistema: generarPDF(datos)
+Sistema -> Usuario: Abre visor de PDF
+
+Usuario -> VentanaResultados: Clic en "Imprimir Resultados"
+VentanaResultados -> Base de Datos: obtenerResultados(numeroOrden)
+Base de Datos -> VentanaResultados: resultados completos
+VentanaResultados -> Sistema: generarPDFResultados(datos)
+Sistema -> Usuario: Abre visor de PDF
+
+================================================================
+
+VALIDACIONES Y CONTROL DE ERRORES:
+================================================================
+
+11. VALIDACIONES DE DATOS
+Usuario -> VentanaDetallesOrdenes: Intenta guardar orden incompleta
+VentanaDetallesOrdenes -> VentanaDetallesOrdenes: validarDatos()
+VentanaDetallesOrdenes -> Usuario: Muestra mensaje de error
+
+Usuario -> VentanaResultados: Intenta guardar resultados sin orden
+VentanaResultados -> VentanaResultados: validarOrden()
+VentanaResultados -> Usuario: Muestra mensaje de error
+
+12. CONTROL DE ACCESO
+Usuario -> InterfazPrincipal: Intenta acceder a módulo restringido
+InterfazPrincipal -> InterfazPrincipal: verificarPermisos(rolUsuario)
+InterfazPrincipal -> Usuario: Deshabilita botón o muestra error
+
+================================================================
+
+CIERRE DE MÓDULOS:
+================================================================
+
+13. CIERRE DE VENTANAS
+Usuario -> VentanaDetallesOrdenes: Clic en "Cerrar"
+VentanaDetallesOrdenes -> VentanaDetallesOrdenes: dispose()
+VentanaDetallesOrdenes -> Usuario: Cierra ventana
+
+Usuario -> VentanaOrdenes: Clic en "Salir"
+VentanaOrdenes -> VentanaOrdenes: dispose()
+VentanaOrdenes -> Usuario: Cierra ventana
+
+Usuario -> VentanaPacientes: Clic en "Cerrar"
+VentanaPacientes -> VentanaPacientes: dispose()
+VentanaPacientes -> Usuario: Cierra ventana
+
+Usuario -> VentanaResultados: Clic en "Cerrar"
+VentanaResultados -> VentanaResultados: dispose()
+VentanaResultados -> Usuario: Cierra ventana
+
+================================================================
+
+NOTAS IMPORTANTES:
+================================================================
+
+- Todas las operaciones de base de datos deben incluir manejo de transacciones
+- Las validaciones deben realizarse tanto en el frontend como en el backend
+- Los mensajes de confirmación deben ser claros y específicos
+- El sistema debe mantener la consistencia de datos entre módulos
+- Las operaciones críticas deben requerir confirmación del usuario
+- El sistema debe implementar logging para auditoría
+- Los permisos deben verificarse en cada operación sensible
