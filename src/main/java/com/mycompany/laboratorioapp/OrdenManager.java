@@ -33,6 +33,15 @@ public class OrdenManager {
         return ordenes;
     }
 
+    public static Orden buscarPorNumero(String numeroOrden) {
+        if (!cargado) cargar();
+        if (numeroOrden == null) return null;
+        for (Orden o : ordenes) {
+            if (numeroOrden.equalsIgnoreCase(o.getNumeroOrden())) return o;
+        }
+        return null;
+    }
+
     private static void cargar() {
         try {
             // 1) Intentar cargar desde Excel (si existe y tiene hoja Ordenes)
@@ -53,8 +62,11 @@ public class OrdenManager {
                                         getString(r,4), getString(r,5), getString(r,6), getString(r,7),
                                         getString(r,8), getString(r,9), getString(r,10), getString(r,11),
                                         getString(r,12), getString(r,13), getString(r,14),
-                                        java.util.List.of(), 0.0
+                                        parseExamenes(getString(r,15)), parseDoubleSafe(getString(r,16))
                                 );
+                                // Estatus en columna 17 si existe
+                                String est = getString(r,17);
+                                if (est != null && !est.isBlank()) o.setEstatus(est);
                                 ordenes.add(o);
                             }
                             cargado = true;
@@ -93,9 +105,11 @@ public class OrdenManager {
                     p.getProperty(prefix + "correo", ""),
                     p.getProperty(prefix + "codemp", ""),
                     p.getProperty(prefix + "empresa", ""),
-                    java.util.List.of(),
-                    0.0
+                    parseExamenes(p.getProperty(prefix + "examenes", "")),
+                    parseDoubleSafe(p.getProperty(prefix + "total", "0"))
                 );
+                String est = p.getProperty(prefix + "estatus", "Activo");
+                if (est != null && !est.isBlank()) o.setEstatus(est);
                 ordenes.add(o);
             }
             cargado = true;
@@ -121,7 +135,7 @@ public class OrdenManager {
             // Cabeceras
             Row h = sh.getRow(0);
             if (h == null) h = sh.createRow(0);
-            String[] cols = {"Orden N°","Factura N°","Control N°","Lote N°","Fecha Reg","Hora Reg","Cod Paciente","Cédula","Nombres","Apellidos","Dirección","Teléfono","Correo","Cod Empresa","Empresa"};
+            String[] cols = {"Orden N°","Factura N°","Control N°","Lote N°","Fecha Reg","Hora Reg","Cod Paciente","Cédula","Nombres","Apellidos","Dirección","Teléfono","Correo","Cod Empresa","Empresa","Exámenes","Total","Estatus"};
             for (int c = 0; c < cols.length; c++) {
                 if (h.getCell(c) == null) h.createCell(c).setCellValue(cols[c]);
                 else h.getCell(c).setCellValue(cols[c]);
@@ -151,6 +165,9 @@ public class OrdenManager {
                 setCell(r,12,o.getCorreo());
                 setCell(r,13,o.getCodigoEmpresa());
                 setCell(r,14,o.getEmpresa());
+                setCell(r,15,joinExamenes(o.getExamenes()));
+                setCell(r,16,String.valueOf(o.getTotal()));
+                setCell(r,17,o.getEstatus());
             }
             try (FileOutputStream fosExcel = new FileOutputStream(externo)) { wb.write(fosExcel); }
             wb.close();
@@ -176,6 +193,9 @@ public class OrdenManager {
                 p.setProperty(prefix + "correo", o.getCorreo());
                 p.setProperty(prefix + "codemp", o.getCodigoEmpresa());
                 p.setProperty(prefix + "empresa", o.getEmpresa());
+                p.setProperty(prefix + "examenes", joinExamenes(o.getExamenes()));
+                p.setProperty(prefix + "total", String.valueOf(o.getTotal()));
+                p.setProperty(prefix + "estatus", o.getEstatus());
             }
             File f = new File(FILE);
             if (!f.getParentFile().exists()) f.getParentFile().mkdirs();
@@ -195,5 +215,41 @@ public class OrdenManager {
     private static void setCell(Row r, int c, String v) {
         if (r.getCell(c) == null) r.createCell(c).setCellValue(v == null ? "" : v);
         else r.getCell(c).setCellValue(v == null ? "" : v);
+    }
+
+    private static List<String> parseExamenes(String data) {
+        if (data == null || data.isBlank()) return java.util.List.of();
+        String[] parts = data.split(";\\s*");
+        java.util.List<String> out = new java.util.ArrayList<>();
+        for (String p : parts) {
+            if (!p.isBlank()) out.add(p.trim());
+        }
+        return out;
+    }
+
+    private static String joinExamenes(List<String> examenes) {
+        if (examenes == null || examenes.isEmpty()) return "";
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < examenes.size(); i++) {
+            if (i > 0) sb.append("; ");
+            sb.append(examenes.get(i));
+        }
+        return sb.toString();
+    }
+
+    private static double parseDoubleSafe(String v) {
+        try { return Double.parseDouble(v); } catch (Exception e) { return 0.0; }
+    }
+
+    // ====== Actualizar estatus y persistir ======
+    public static void actualizarEstatus(String numeroOrden, String nuevoEstatus) {
+        if (numeroOrden == null) return;
+        for (Orden o : getOrdenes()) {
+            if (numeroOrden.equalsIgnoreCase(o.getNumeroOrden())) {
+                o.setEstatus(nuevoEstatus);
+                guardar();
+                break;
+            }
+        }
     }
 }

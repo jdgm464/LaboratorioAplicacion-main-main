@@ -14,6 +14,7 @@ import java.time.Period;
 import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
 import java.util.Map;
+// import java.text.Normalizer; // no se usa
 
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
@@ -32,6 +33,7 @@ public class VentanaRegistroPacientes {
             correoField, edadField;
     private final JComboBox<String> nacionalidadCombo, sexoCombo, entidadCombo;
     private final JCheckBox rnCheck;
+    private final JCheckBox familiarCheck;
 
     private final VentanaDetallesOrdenes ventanaDetalles;
 
@@ -49,7 +51,7 @@ public class VentanaRegistroPacientes {
         gbc.insets = new Insets(8, 8, 8, 8);
         gbc.anchor = GridBagConstraints.WEST;
 
-        // ----- Fila 1: Cedula + Nacionalidad + Codigo -----
+        // ----- Fila 1: Cedula + Nacionalidad + Codigo + Familiar -----
         gbc.gridx = 0;
         gbc.gridy = 0;
         panelCampos.add(new JLabel("Cédula:"), gbc);
@@ -71,6 +73,12 @@ public class VentanaRegistroPacientes {
         gbc.gridx = 5;
         codigoField = new JTextField(10);
         panelCampos.add(codigoField, gbc);
+
+        gbc.gridx = 6;
+        panelCampos.add(new JLabel("Familiar:"), gbc);
+        gbc.gridx = 7;
+        familiarCheck = new JCheckBox();
+        panelCampos.add(familiarCheck, gbc);
 
         // ----- Fila 2: Nombres + R/N -----
         gbc.gridx = 0;
@@ -162,6 +170,27 @@ public class VentanaRegistroPacientes {
         btnActualizar.addActionListener(e -> actualizarPaciente());
         btnSalir.addActionListener(e -> frame.dispose()); // 🚀 salir cierra ventana
         btnDeshacer.addActionListener(e -> limpiarOCerrar());
+
+        // Generar código automáticamente al abrir
+        String codigoAuto = generarCodigoAutomatico();
+        if (codigoAuto != null && !codigoAuto.isBlank()) {
+            codigoField.setText(codigoAuto);
+            codigoField.setEditable(false);
+        }
+
+        // Si es familiar, no asignar código
+        familiarCheck.addActionListener(e -> {
+            if (familiarCheck.isSelected()) {
+                codigoField.setText("");
+                codigoField.setEditable(false);
+            } else {
+                String codigoAuto2 = generarCodigoAutomatico();
+                if (codigoAuto2 != null && !codigoAuto2.isBlank()) {
+                    codigoField.setText(codigoAuto2);
+                    codigoField.setEditable(false);
+                }
+            }
+        });
     }
 
     private JTextField crearCampo(JPanel panel, GridBagConstraints gbc, int fila, String etiqueta) {
@@ -282,4 +311,16 @@ public class VentanaRegistroPacientes {
     public void mostrar() {
         frame.setVisible(true);
     }
+
+    // ====== Código automático ======
+    private String generarCodigoAutomatico() {
+        // Generar un código aleatorio de 6 dígitos, independiente de la cédula o Excel
+        java.util.concurrent.ThreadLocalRandom rnd = java.util.concurrent.ThreadLocalRandom.current();
+        int n = 1 + rnd.nextInt(999999);
+        return String.format("%06d", n);
+    }
+
+    // normalizar ya no se usa; se deja por si se requiere en futuras validaciones
+
+    // generarFallback ya no se utiliza; mantenido como referencia histórica
 }

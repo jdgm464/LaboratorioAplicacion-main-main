@@ -330,6 +330,7 @@ public class VentanaDetallesOrdenes {
         JButton btnConstancia = new JButton("Constancia");
         JButton btnOBio       = new JButton("O/Bioanalista");
         JButton btnNuevo      = new JButton("Nuevo");
+        JButton btnGuardar    = new JButton("Guardar");
         JButton btnCargar     = new JButton("Cargar");
         JButton btnModificar  = new JButton("Modificar");
         JButton btnAnular     = new JButton("Anular");
@@ -343,6 +344,7 @@ public class VentanaDetallesOrdenes {
         botonesPanel.add(btnConstancia);
         botonesPanel.add(btnOBio);
         botonesPanel.add(btnNuevo);
+        botonesPanel.add(btnGuardar);
         botonesPanel.add(btnCargar);
         botonesPanel.add(btnModificar);
         botonesPanel.add(btnAnular);
@@ -375,7 +377,8 @@ public class VentanaDetallesOrdenes {
             reg.mostrar();
         });
 
-        btnCargar.addActionListener(e -> {
+        // Guardar orden
+        btnGuardar.addActionListener(e -> {
             String cedula = cedulaField.getText().trim();
             if (cedula.isEmpty()) {
                 JOptionPane.showMessageDialog(frame, "La cédula es obligatoria para guardar.");
@@ -435,6 +438,43 @@ public class VentanaDetallesOrdenes {
             if (ventanaPadre != null) {
                 ventanaPadre.refrescarTabla();
             }
+        });
+
+        // Cargar orden por número
+        btnCargar.addActionListener(e -> {
+            String numero = JOptionPane.showInputDialog(frame, "Ingrese el número de presupuesto/orden:", "Cargar", JOptionPane.QUESTION_MESSAGE);
+            if (numero == null || numero.trim().isEmpty()) return;
+            numero = numero.trim();
+            Orden o = OrdenManager.buscarPorNumero(numero);
+            if (o == null) {
+                JOptionPane.showMessageDialog(frame, "No se encontró la orden " + numero, "Cargar", JOptionPane.INFORMATION_MESSAGE);
+                return;
+            }
+            // Rellenar datos del paciente y empresa
+            cedulaField.setText(o.getCedula());
+            nombreField.setText(o.getNombres());
+            apellidoField.setText(o.getApellidos());
+            direccionField.setText(o.getDireccion());
+            telefonoField.setText(o.getTelefono());
+            correoField.setText(o.getCorreo());
+            rifField.setText(o.getCedula());
+            // entidad si existe
+            if (o.getEmpresa() != null) {
+                entidadCombo.addItem(o.getEmpresa());
+                entidadCombo.setSelectedItem(o.getEmpresa());
+            }
+            // Cargar exámenes en la tabla de factura
+            modeloFactura.setRowCount(0);
+            if (o.getExamenes() != null) {
+                for (String ex : o.getExamenes()) {
+                    modeloFactura.addRow(new Object[]{ex, ""});
+                }
+            }
+            // Total
+            totalField.setText(String.format("%.2f", o.getTotal()));
+            saldoField.setText(String.format("%.2f", o.getTotal()));
+            subtotalField.setText("");
+            actualizarTotales();
         });
 
         btnAnular.addActionListener(e -> {

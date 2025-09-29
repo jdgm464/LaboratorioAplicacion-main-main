@@ -13,6 +13,8 @@ import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTable;
 import javax.swing.JTextField;
+import javax.swing.JSpinner;
+import javax.swing.SpinnerDateModel;
 import javax.swing.table.DefaultTableModel;
 import java.util.Map;
 import java.util.HashMap;
@@ -44,6 +46,14 @@ public class VentanaPacientes {
     private final JFrame frame;
     private final JTable tablaPacientes;
     private final DefaultTableModel modeloTabla;
+    // Campos de búsqueda
+    private JTextField txtCedula;
+    private JTextField txtNombres;
+    private JTextField txtApellidos;
+    private JTextField txtCodigoWeb;
+    private JSpinner desdeSpinner;
+    private JSpinner hastaSpinner;
+    private JLabel lblVisitas;
 
     public VentanaPacientes() {
         frame = new JFrame("Registro de Pacientes");
@@ -58,20 +68,37 @@ public class VentanaPacientes {
         JPanel panelBusqueda = new JPanel(new FlowLayout(FlowLayout.LEFT));
 
         panelBusqueda.add(new JLabel("Cédula"));
-        JTextField txtCedula = new JTextField(10);
+        txtCedula = new JTextField(10);
         panelBusqueda.add(txtCedula);
 
         panelBusqueda.add(new JLabel("Nombres"));
-        JTextField txtNombres = new JTextField(10);
+        txtNombres = new JTextField(10);
         panelBusqueda.add(txtNombres);
 
         panelBusqueda.add(new JLabel("Apellidos"));
-        JTextField txtApellidos = new JTextField(10);
+        txtApellidos = new JTextField(10);
         panelBusqueda.add(txtApellidos);
 
         panelBusqueda.add(new JLabel("Código Web"));
-        JTextField txtCodigoWeb = new JTextField(10);
+        txtCodigoWeb = new JTextField(10);
         panelBusqueda.add(txtCodigoWeb);
+
+        // Filtros de fecha (Desde / Hasta)
+        panelBusqueda.add(new JLabel("Desde"));
+        desdeSpinner = new JSpinner(new SpinnerDateModel(new java.util.Date(), null, null, java.util.Calendar.DAY_OF_MONTH));
+        desdeSpinner.setEditor(new JSpinner.DateEditor(desdeSpinner, "dd/MM/yyyy"));
+        panelBusqueda.add(desdeSpinner);
+
+        panelBusqueda.add(new JLabel("Hasta"));
+        hastaSpinner = new JSpinner(new SpinnerDateModel(new java.util.Date(), null, null, java.util.Calendar.DAY_OF_MONTH));
+        hastaSpinner.setEditor(new JSpinner.DateEditor(hastaSpinner, "dd/MM/yyyy"));
+        panelBusqueda.add(hastaSpinner);
+
+        JButton btnContar = new JButton("Contar visitas");
+        panelBusqueda.add(btnContar);
+
+        lblVisitas = new JLabel("Visitas: -");
+        panelBusqueda.add(lblVisitas);
 
         panel.add(panelBusqueda, BorderLayout.NORTH);
 
@@ -103,10 +130,73 @@ public class VentanaPacientes {
 
         panel.add(panelBotones, BorderLayout.SOUTH);
 
+        // Listeners para conteo de visitas en rango
+        btnContar.addActionListener(e -> contarVisitasEnRango());
+        desdeSpinner.addChangeListener(e -> contarVisitasEnRango());
+        hastaSpinner.addChangeListener(e -> contarVisitasEnRango());
+        txtCedula.addActionListener(e -> contarVisitasEnRango());
+        txtCodigoWeb.addActionListener(e -> contarVisitasEnRango());
+
         // ------------------ CARGAR EXCEL ------------------
         cargarPacientesDesdeExcel();
 
         frame.add(panel);
+    }
+
+    private void contarVisitasEnRango() {
+        try {
+            String cedula = txtCedula.getText() != null ? txtCedula.getText().trim() : "";
+            if (cedula.isEmpty()) {
+                // Si hay fila seleccionada, usar su cédula
+                int sel = tablaPacientes.getSelectedRow();
+                if (sel >= 0) {
+                    Object v = modeloTabla.getValueAt(sel, 3);
+                    if (v != null) cedula = v.toString().trim();
+                }
+            }
+            if (cedula.isEmpty()) {
+                // Buscar por código web si está
+                String codigo = txtCodigoWeb.getText() != null ? txtCodigoWeb.getText().trim() : "";
+                if (!codigo.isEmpty()) {
+                    for (int i = 0; i < modeloTabla.getRowCount(); i++) {
+                        Object codVal = modeloTabla.getValueAt(i, 0);
+                        if (codVal != null && codigo.equalsIgnoreCase(codVal.toString().trim())) {
+                            Object v = modeloTabla.getValueAt(i, 3);
+                            if (v != null) { cedula = v.toString().trim(); break; }
+                        }
+                    }
+                }
+            }
+            if (cedula.isEmpty()) {
+                JOptionPane.showMessageDialog(frame, "Indique la cédula, seleccione un paciente o ingrese Código Web.");
+                return;
+            }
+
+            java.text.SimpleDateFormat sdf = new java.text.SimpleDateFormat("dd/MM/yyyy");
+            sdf.setLenient(false);
+            java.util.Date desde = (java.util.Date) desdeSpinner.getValue();
+            java.util.Date hasta = (java.util.Date) hastaSpinner.getValue();
+            if (hasta.before(desde)) {
+                JOptionPane.showMessageDialog(frame, "La fecha 'Hasta' no puede ser anterior a 'Desde'.");
+                return;
+            }
+
+            String cedNorm = normalizarCedula(cedula);
+            int count = 0;
+            for (Orden o : OrdenManager.getOrdenes()) {
+                String oc = normalizarCedula(o.getCedula());
+                if (!cedNorm.equalsIgnoreCase(oc)) continue;
+                try {
+                    java.util.Date f = sdf.parse(o.getFechaRegistro());
+                    if ((f.equals(desde) || f.after(desde)) && (f.equals(hasta) || f.before(hasta))) {
+                        count++;
+                    }
+                } catch (Exception ignored) {}
+            }
+            lblVisitas.setText("Visitas: " + count);
+        } catch (Exception ex) {
+            JOptionPane.showMessageDialog(frame, "Error al contar visitas: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+        }
     }
 
     private void cargarPacientesDesdeExcel() {

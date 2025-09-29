@@ -144,7 +144,13 @@ public class VentanaOrdenes {
     public void anularSeleccionada() {
         int fila = tablaPacientes.getSelectedRow();
         if (fila >= 0) {
+            // Cambiar en UI
             cambiarEstatusOrden(fila, "Anulado");
+            // Persistir en el manager
+            Object numeroOrden = modeloTabla.getValueAt(tablaPacientes.convertRowIndexToModel(fila), 0);
+            if (numeroOrden != null) {
+                OrdenManager.actualizarEstatus(numeroOrden.toString(), "Anulado");
+            }
         } else {
             JOptionPane.showMessageDialog(ventana, "Seleccione una orden para anular.");
         }

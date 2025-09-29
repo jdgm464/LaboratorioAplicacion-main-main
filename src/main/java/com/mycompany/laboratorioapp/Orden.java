@@ -20,6 +20,7 @@ public class Orden {
     private String empresa;
     private List<String> examenes;
     private double total;
+    private String estatus = "Activo";
 
     public Orden(String numeroOrden, String numeroFactura, String numeroControl, String numeroLote,
                  String fechaRegistro, String horaRegistro, String codigoPaciente, String cedula,
@@ -42,6 +43,7 @@ public class Orden {
         this.empresa = empresa;
         this.examenes = examenes;
         this.total = total;
+        this.estatus = "Activo";
     }
 
     // =================== GETTERS ===================
@@ -62,6 +64,7 @@ public class Orden {
     public String getEmpresa() { return empresa; }
     public List<String> getExamenes() { return examenes; }
     public double getTotal() { return total; }
+    public String getEstatus() { return estatus; }
 
     // =================== SETTERS opcionales ===================
     public void setNumeroOrden(String numeroOrden) { this.numeroOrden = numeroOrden; }
@@ -81,13 +84,14 @@ public class Orden {
     public void setEmpresa(String empresa) { this.empresa = empresa; }
     public void setExamenes(List<String> examenes) { this.examenes = examenes; }
     public void setTotal(double total) { this.total = total; }
+    public void setEstatus(String estatus) { this.estatus = estatus; }
     // Devuelve los datos de la orden en formato de fila para la tabla
     public Object[] toRow() {
         return new Object[] {
             numeroOrden, numeroFactura, numeroControl, numeroLote,
             fechaRegistro, horaRegistro, codigoPaciente, cedula,
             nombres, apellidos, direccion, telefono, correo,
-            codigoEmpresa, empresa
+            codigoEmpresa, empresa, estatus
         };
     }
 }
