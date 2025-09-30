@@ -2,6 +2,10 @@ package com.mycompany.laboratorioapp;
 
 // import org.apache.poi.ss.usermodel.*; // No se usa
 // import org.apache.poi.xssf.usermodel.XSSFWorkbook; // No se usa
+import org.apache.poi.ss.usermodel.Row;
+import org.apache.poi.ss.usermodel.Sheet;
+import org.apache.poi.ss.usermodel.Workbook;
+import org.apache.poi.ss.usermodel.WorkbookFactory;
 
 import java.awt.BorderLayout;
 import java.awt.Color;
@@ -14,7 +18,11 @@ import java.time.Period;
 import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
 import java.util.Map;
-// import java.text.Normalizer; // no se usa
+import java.util.Properties;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.text.Normalizer;
 
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
@@ -171,8 +179,8 @@ public class VentanaRegistroPacientes {
         btnSalir.addActionListener(e -> frame.dispose()); // 🚀 salir cierra ventana
         btnDeshacer.addActionListener(e -> limpiarOCerrar());
 
-        // Generar código automáticamente al abrir
-        String codigoAuto = generarCodigoAutomatico();
+        // Generar código secuencial automáticamente al abrir (no incrementa el contador global)
+        String codigoAuto = proponerSiguienteCodigo();
         if (codigoAuto != null && !codigoAuto.isBlank()) {
             codigoField.setText(codigoAuto);
             codigoField.setEditable(false);
@@ -184,7 +192,7 @@ public class VentanaRegistroPacientes {
                 codigoField.setText("");
                 codigoField.setEditable(false);
             } else {
-                String codigoAuto2 = generarCodigoAutomatico();
+                String codigoAuto2 = proponerSiguienteCodigo();
                 if (codigoAuto2 != null && !codigoAuto2.isBlank()) {
                     codigoField.setText(codigoAuto2);
                     codigoField.setEditable(false);
@@ -230,7 +238,27 @@ public class VentanaRegistroPacientes {
         }
 
         Map<String, String> datos = obtenerDatosFormulario();
-        BaseDeDatosExcel.guardarPaciente(datos);
+        // Persistir con gestor real para que VentanaDetallesOrdenes pueda leerlo inmediatamente
+        try {
+            Paciente p = new Paciente(
+                    cedula,
+                    datos.getOrDefault("nombres", ""),
+                    datos.getOrDefault("apellidos", ""),
+                    safeParseInt(datos.getOrDefault("edad", "0")),
+                    datos.getOrDefault("direccion", ""),
+                    datos.getOrDefault("telefono", ""),
+                    datos.getOrDefault("correo", "")
+            );
+            GestorPacientes.guardarPaciente(p);
+        } catch (Exception ignored) {}
+
+        // También llamar a la API placeholder si existiera una implementación
+        try { BaseDeDatosExcel.guardarPaciente(datos); } catch (Exception ignored) {}
+
+        // Actualizar contador de código solo cuando NO es familiar y se guardó
+        if (!familiarCheck.isSelected()) {
+            confirmarCodigoAsignado(codigoField.getText().trim());
+        }
 
         JOptionPane.showMessageDialog(frame, "Paciente registrado exitosamente.");
         ventanaDetalles.setCedulaPaciente(cedula);
@@ -312,15 +340,152 @@ public class VentanaRegistroPacientes {
         frame.setVisible(true);
     }
 
-    // ====== Código automático ======
-    private String generarCodigoAutomatico() {
-        // Generar un código aleatorio de 6 dígitos, independiente de la cédula o Excel
-        java.util.concurrent.ThreadLocalRandom rnd = java.util.concurrent.ThreadLocalRandom.current();
-        int n = 1 + rnd.nextInt(999999);
-        return String.format("%06d", n);
+    // ====== Código secuencial ======
+    private static final String PAC_PROPS = System.getProperty("user.home")
+            + File.separator + ".laboratorioapp" + File.separator + "pacientes.properties";
+
+    // Proponer siguiente código sin modificar el contador persistente
+    private String proponerSiguienteCodigo() {
+        int width = Math.max(4, leerAnchoDesdeExcel());
+        int ultimo = Math.max(leerUltimoCodigoPersistido(), leerMaxCodigoExcel());
+        int next = ultimo + 1;
+        return String.format("%0" + width + "d", next);
     }
 
-    // normalizar ya no se usa; se deja por si se requiere en futuras validaciones
+    // Confirmar que el código actual fue asignado; persistir como último usado
+    private void confirmarCodigoAsignado(String codigo) {
+        if (codigo == null || codigo.isBlank()) return;
+        int val = extraerNumero(codigo);
+        int width = codigo.replaceAll("[^0-9]", "").length();
+        if (width <= 0) width = 4;
+        guardarUltimoCodigoPersistido(val, width);
+    }
 
-    // generarFallback ya no se utiliza; mantenido como referencia histórica
+    private int leerUltimoCodigoPersistido() {
+        try {
+            File f = new File(PAC_PROPS);
+            if (!f.exists()) return 0;
+            Properties p = new Properties();
+            try (FileInputStream fis = new FileInputStream(f)) { p.load(fis); }
+            return Integer.parseInt(p.getProperty("lastCode", "0"));
+        } catch (Exception e) { return 0; }
+    }
+
+    private void guardarUltimoCodigoPersistido(int last, int width) {
+        try {
+            File f = new File(PAC_PROPS);
+            if (!f.getParentFile().exists()) f.getParentFile().mkdirs();
+            Properties p = new Properties();
+            if (f.exists()) try (FileInputStream fis = new FileInputStream(f)) { p.load(fis); } catch (Exception ignored) {}
+            p.setProperty("lastCode", String.valueOf(last));
+            p.setProperty("width", String.valueOf(width));
+            try (FileOutputStream fos = new FileOutputStream(f)) { p.store(fos, "Pacientes - correlativo de codigo"); }
+        } catch (Exception ignored) {}
+    }
+
+    private int leerAnchoDesdeExcel() {
+        try {
+            Workbook workbook;
+            File externo = new File("IPPUSNEG informacion..xlsx");
+            if (externo.exists()) {
+                try (FileInputStream fis = new FileInputStream(externo)) { workbook = WorkbookFactory.create(fis); }
+            } else {
+                try (java.io.InputStream is = getClass().getClassLoader().getResourceAsStream("IPPUSNEG informacion..xlsx")) {
+                    if (is == null) return leerAnchoPersistido();
+                    workbook = WorkbookFactory.create(is);
+                }
+            }
+            Sheet sheet = workbook.getSheetAt(0);
+            Row header = sheet.getRow(0);
+            int colCodigo = -1;
+            if (header != null) {
+                for (int j = 0; j < 40; j++) {
+                    if (header.getCell(j) == null) continue;
+                    String h = normalizarHeader(header.getCell(j).toString());
+                    if (h.contains("codigo")) { colCodigo = j; break; }
+                }
+            }
+            if (colCodigo < 0) return leerAnchoPersistido();
+            int width = 0;
+            for (int i = 1; i <= sheet.getLastRowNum(); i++) {
+                Row row = sheet.getRow(i);
+                if (row == null || row.getCell(colCodigo) == null) continue;
+                String raw = row.getCell(colCodigo).toString();
+                String digits = raw.replaceAll("[^0-9]", "");
+                if (digits.length() > width) width = digits.length();
+            }
+            try { workbook.close(); } catch (Exception ignored) {}
+            return Math.max(width, leerAnchoPersistido());
+        } catch (Exception e) { return leerAnchoPersistido(); }
+    }
+
+    private int leerAnchoPersistido() {
+        try {
+            File f = new File(PAC_PROPS);
+            if (!f.exists()) return 4;
+            Properties p = new Properties();
+            try (FileInputStream fis = new FileInputStream(f)) { p.load(fis); }
+            return Integer.parseInt(p.getProperty("width", "4"));
+        } catch (Exception e) { return 4; }
+    }
+
+    private int leerMaxCodigoExcel() {
+        try {
+            Workbook workbook;
+            File externo = new File("IPPUSNEG informacion..xlsx");
+            if (externo.exists()) {
+                try (FileInputStream fis = new FileInputStream(externo)) { workbook = WorkbookFactory.create(fis); }
+            } else {
+                try (java.io.InputStream is = getClass().getClassLoader().getResourceAsStream("IPPUSNEG informacion..xlsx")) {
+                    if (is == null) return 0;
+                    workbook = WorkbookFactory.create(is);
+                }
+            }
+            Sheet sheet = workbook.getSheetAt(0);
+            Row header = sheet.getRow(0);
+            int colCodigo = -1;
+            if (header != null) {
+                for (int j = 0; j < 40; j++) {
+                    if (header.getCell(j) == null) continue;
+                    String h = normalizarHeader(header.getCell(j).toString());
+                    if (h.contains("codigo")) { colCodigo = j; break; }
+                }
+            }
+            if (colCodigo < 0) { try { workbook.close(); } catch (Exception ignored) {} return 0; }
+            int maxNum = 0;
+            for (int i = 1; i <= sheet.getLastRowNum(); i++) {
+                Row row = sheet.getRow(i);
+                if (row == null || row.getCell(colCodigo) == null) continue;
+                String raw = row.getCell(colCodigo).toString();
+                int val = extraerNumero(raw);
+                if (val > maxNum) maxNum = val;
+            }
+            try { workbook.close(); } catch (Exception ignored) {}
+            return maxNum;
+        } catch (Exception e) { return 0; }
+    }
+
+    private static int extraerNumero(String s) {
+        try {
+            String digits = s == null ? "" : s.replaceAll("[^0-9]", "");
+            if (digits.isEmpty()) return 0;
+            return Integer.parseInt(digits);
+        } catch (Exception e) { return 0; }
+    }
+
+    private static String normalizarHeader(String s) {
+        if (s == null) return "";
+        String t = Normalizer.normalize(s, Normalizer.Form.NFD)
+                .replaceAll("\\p{InCombiningDiacriticalMarks}+", "");
+        t = t.toLowerCase().trim();
+        t = t.replace("á", "a").replace("é", "e").replace("í", "i").replace("ó", "o").replace("ú", "u");
+        t = t.replace("n°", "numero");
+        t = t.replaceAll("[^a-z0-9 ]", "");
+        t = t.replace("  ", " ");
+        return t;
+    }
+
+    private static int safeParseInt(String s) {
+        try { return Integer.parseInt(s); } catch (Exception e) { return 0; }
+    }
 }

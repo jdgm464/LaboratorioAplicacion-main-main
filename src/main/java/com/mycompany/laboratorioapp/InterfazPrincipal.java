@@ -43,6 +43,18 @@ public class InterfazPrincipal {
         mainFrame.setMinimumSize(new Dimension(1000, 650));
         mainFrame.setLayout(new BorderLayout());
 
+        // Barra de menús (superior)
+        javax.swing.JMenuBar menuBar = new javax.swing.JMenuBar();
+        javax.swing.JMenu menuVentas = new javax.swing.JMenu("Ventas");
+        javax.swing.JMenuItem itemControlPrecios = new javax.swing.JMenuItem("Control de precios");
+        itemControlPrecios.addActionListener(e -> {
+            VentanaControlPrecios v = new VentanaControlPrecios();
+            v.mostrar();
+        });
+        menuVentas.add(itemControlPrecios);
+        menuBar.add(menuVentas);
+        mainFrame.setJMenuBar(menuBar);
+
         agregarMenuSuperior();
         agregarPanelIzquierdo();
         agregarPanelCentral();
