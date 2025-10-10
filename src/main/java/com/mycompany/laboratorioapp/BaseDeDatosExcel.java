@@ -37,6 +37,10 @@ public class BaseDeDatosExcel {
         return null;
     }
     private final static List<Examen> examenes = new ArrayList<>();
+    private final static java.util.Map<String, Double> preciosPorCodigo = new java.util.HashMap<>();
+    private static String listaPreciosPath;
+    private static final String CONFIG_DIR = System.getProperty("user.home") + java.io.File.separator + ".laboratorioapp";
+    private static final String CONFIG_FILE = CONFIG_DIR + java.io.File.separator + "config.properties";
     private final static List<String> entidades = List.of(
         "Hospital Central",
         "Clínica La Salud",
@@ -48,8 +52,10 @@ public class BaseDeDatosExcel {
         return entidades;
     }
 
+    // Cargar exámenes desde archivo de exámenes (catálogo clínico)
     public static void cargarDesdeExcel(String rutaArchivo) throws Exception {
         examenes.clear();
+        preciosPorCodigo.clear();
 
         try (FileInputStream fis = new FileInputStream(rutaArchivo);
              Workbook workbook = new XSSFWorkbook(fis)) {
@@ -70,12 +76,14 @@ public class BaseDeDatosExcel {
                 Row row = sheet.getRow(i);
                 if (row == null) continue;
 
-                Cell nombreCell = row.getCell(0);
-                Cell precioCell = row.getCell(1);
+                Cell codigoCell = row.getCell(0);
+                Cell nombreCell = row.getCell(1);
+                Cell precioCell = row.getCell(2);
 
                 if (nombreCell == null || precioCell == null) continue;
 
 
+                String codigo = codigoCell != null ? codigoCell.toString().trim() : null;
                 String nombre;
                 switch (nombreCell.getCellType()) {
                     case STRING -> nombre = nombreCell.getStringCellValue();
@@ -96,12 +104,97 @@ public class BaseDeDatosExcel {
                     default -> precio = 0.0;
                 }
 
-                examenes.add(new Examen(nombre, precio));
+                Examen ex = new Examen(codigo, nombre, precio);
+                examenes.add(ex);
+                if (codigo != null && !codigo.isBlank()) preciosPorCodigo.put(codigo, precio);
             }
         }
     }
 
     public static List<Examen> getExamenes() {
         return examenes;
+    }
+
+    // Cargar precios desde "lista precios examenes" y exponerlos como DolarContado1
+    public static void cargarListaPrecios(String rutaArchivo) throws Exception {
+        listaPreciosPath = rutaArchivo;
+        try (FileInputStream fis = new FileInputStream(rutaArchivo); Workbook workbook = new XSSFWorkbook(fis)) {
+            Sheet sheet = workbook.getSheetAt(0);
+            for (int i = 1; i <= sheet.getLastRowNum(); i++) {
+                Row row = sheet.getRow(i);
+                if (row == null) continue;
+                Cell codigoCell = row.getCell(0);
+                Cell precioCell = row.getCell(2);
+                if (codigoCell == null || precioCell == null) continue;
+                String codigo = codigoCell.toString().trim();
+                double precio;
+                switch (precioCell.getCellType()) {
+                    case NUMERIC -> precio = precioCell.getNumericCellValue();
+                    case STRING -> {
+                        try { precio = Double.parseDouble(precioCell.getStringCellValue()); }
+                        catch (NumberFormatException e) { precio = 0.0; }
+                    }
+                    default -> precio = 0.0;
+                }
+                preciosPorCodigo.put(codigo, precio);
+            }
+        }
+    }
+
+    public static Double getPrecioPorCodigo(String codigo) {
+        return preciosPorCodigo.get(codigo);
+    }
+
+    public static void actualizarPrecio(String codigo, double nuevoPrecio) {
+        preciosPorCodigo.put(codigo, nuevoPrecio);
+    }
+
+    public static void setListaPreciosPath(String path) { listaPreciosPath = path; }
+    public static String getListaPreciosPath() { return listaPreciosPath; }
+
+    public static void cargarRutaListaPreciosDesdeConfig() {
+        try {
+            java.io.File f = new java.io.File(CONFIG_FILE);
+            if (!f.exists()) return;
+            java.util.Properties p = new java.util.Properties();
+            try (java.io.FileInputStream fis = new java.io.FileInputStream(f)) { p.load(fis); }
+            listaPreciosPath = p.getProperty("lista_precios_path", listaPreciosPath);
+        } catch (Exception ignored) {}
+    }
+
+    public static void guardarRutaListaPreciosEnConfig(String path) {
+        try {
+            java.io.File dir = new java.io.File(CONFIG_DIR);
+            if (!dir.exists()) dir.mkdirs();
+            java.util.Properties p = new java.util.Properties();
+            java.io.File f = new java.io.File(CONFIG_FILE);
+            if (f.exists()) { try (java.io.FileInputStream fis = new java.io.FileInputStream(f)) { p.load(fis); } catch (Exception ignored) {} }
+            p.setProperty("lista_precios_path", path == null ? "" : path);
+            try (java.io.FileOutputStream fos = new java.io.FileOutputStream(f)) { p.store(fos, "Configuración LaboratorioApp"); }
+            listaPreciosPath = path;
+        } catch (Exception ignored) {}
+    }
+
+    public static void guardarListaPrecios() throws Exception {
+        if (listaPreciosPath == null || listaPreciosPath.isBlank()) return;
+        try (java.io.FileInputStream fis = new java.io.FileInputStream(listaPreciosPath);
+             org.apache.poi.ss.usermodel.Workbook workbook = new org.apache.poi.xssf.usermodel.XSSFWorkbook(fis)) {
+            org.apache.poi.ss.usermodel.Sheet sheet = workbook.getSheetAt(0);
+            for (int i = 1; i <= sheet.getLastRowNum(); i++) {
+                org.apache.poi.ss.usermodel.Row row = sheet.getRow(i);
+                if (row == null) continue;
+                org.apache.poi.ss.usermodel.Cell codigoCell = row.getCell(0);
+                if (codigoCell == null) continue;
+                String codigo = codigoCell.toString().trim();
+                if (preciosPorCodigo.containsKey(codigo)) {
+                    org.apache.poi.ss.usermodel.Cell precioCell = row.getCell(2);
+                    if (precioCell == null) precioCell = row.createCell(2);
+                    precioCell.setCellValue(preciosPorCodigo.get(codigo));
+                }
+            }
+            try (java.io.FileOutputStream fos = new java.io.FileOutputStream(listaPreciosPath)) {
+                workbook.write(fos);
+            }
+        }
     }
 }

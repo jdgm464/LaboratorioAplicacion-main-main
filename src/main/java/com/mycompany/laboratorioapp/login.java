@@ -28,7 +28,7 @@ public class login {
         usuariosRegistrados.put("admin", new Usuario("Administrador", "admin", "1234"));
         usuariosRegistrados.put("bio1", new Usuario("Bioanalista", "bio1", "1234"));
 
-        frame = new JFrame("Login - Maberoca");
+        frame = new JFrame("Login - Medisoft");
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         frame.setSize(420, 260);
         frame.setLayout(new GridBagLayout());

@@ -210,10 +210,16 @@ public class VentanaDetallesOrdenes {
     private void agregarTablasYValores(JPanel mainPanel) {
         JPanel tablasPanel = new JPanel(new GridLayout(1, 2, 10, 10));
 
-        // Izquierda: Exámenes
-        String[] columnasExamenes = {"Exámenes"};
-        DefaultTableModel modeloExamenes = new DefaultTableModel(columnasExamenes, 0);
+        // Izquierda: Exámenes (Código oculto + Descripción)
+        String[] columnasExamenes = {"Código", "Descripción"};
+        DefaultTableModel modeloExamenes = new DefaultTableModel(columnasExamenes, 0) {
+            @Override public boolean isCellEditable(int row, int column) { return false; }
+        };
         tablaExamenes = new JTable(modeloExamenes);
+        // Ocultar columna de código
+        tablaExamenes.getColumnModel().getColumn(0).setMinWidth(0);
+        tablaExamenes.getColumnModel().getColumn(0).setMaxWidth(0);
+        tablaExamenes.getColumnModel().getColumn(0).setWidth(0);
         JScrollPane scrollExamenes = new JScrollPane(tablaExamenes);
         scrollExamenes.setBorder(BorderFactory.createTitledBorder("Exámenes"));
         tablasPanel.add(scrollExamenes);
@@ -234,9 +240,11 @@ public class VentanaDetallesOrdenes {
             if (!e.getValueIsAdjusting()) {
                 int fila = tablaExamenes.getSelectedRow();
                 if (fila >= 0) {
-                    String examen = tablaExamenes.getValueAt(fila, 0).toString();
-                    double costo = Math.random() * 50 + 10; // temporal
-                    modeloFactura.addRow(new Object[]{examen, String.format("%.2f", costo)});
+                    String codigo = String.valueOf(tablaExamenes.getValueAt(fila, 0));
+                    String descripcion = String.valueOf(tablaExamenes.getValueAt(fila, 1));
+                    Double p = BaseDeDatosExcel.getPrecioPorCodigo(codigo);
+                    double costo = p != null ? p : 0.0;
+                    modeloFactura.addRow(new Object[]{descripcion, String.format("%.2f", costo)});
                     actualizarTotales();
                 }
             }
@@ -285,11 +293,38 @@ public class VentanaDetallesOrdenes {
 
     private void cargarExamenesDesdeBD() {
         try {
-            BaseDeDatosExcel.cargarDesdeExcel("resources/IPPUSNEG informacion.xlsx");
+            // 1) Intentar con ruta recordada en config
+            BaseDeDatosExcel.cargarRutaListaPreciosDesdeConfig();
+            String path = BaseDeDatosExcel.getListaPreciosPath();
+            boolean ok = false;
+            if (path != null && !path.isBlank()) {
+                try {
+                    BaseDeDatosExcel.cargarDesdeExcel(path);
+                    BaseDeDatosExcel.cargarListaPrecios(path);
+                    ok = true;
+                } catch (Exception ignored) {}
+            }
+            // 2) Fallback a archivos por defecto en raíz o resources
+            if (!ok) {
+                String def = "lista precios examenes.xlsx";
+                try {
+                    BaseDeDatosExcel.cargarDesdeExcel(def);
+                    BaseDeDatosExcel.cargarListaPrecios(def);
+                    ok = true;
+                } catch (Exception ex) {
+                    try {
+                        BaseDeDatosExcel.cargarDesdeExcel("resources/" + def);
+                        BaseDeDatosExcel.cargarListaPrecios("resources/" + def);
+                        ok = true;
+                    } catch (Exception ignored) {}
+                }
+            }
+
             List<Examen> examenes = BaseDeDatosExcel.getExamenes();
             DefaultTableModel modelo = (DefaultTableModel) tablaExamenes.getModel();
             for (Examen examen : examenes) {
-                modelo.addRow(new Object[]{examen.getNombre()});
+                String cod = examen.getCodigo() == null ? "" : examen.getCodigo();
+                modelo.addRow(new Object[]{cod, examen.getNombre()});
             }
         } catch (Exception e) {
             JOptionPane.showMessageDialog(frame,
@@ -300,19 +335,23 @@ public class VentanaDetallesOrdenes {
     }
 
     private void actualizarTotales() {
-        double subtotal = 0.0;
+        double subtotalBruto = 0.0;
         for (int i = 0; i < modeloFactura.getRowCount(); i++) {
             try {
-                subtotal += Double.parseDouble(modeloFactura.getValueAt(i, 1).toString());
+                subtotalBruto += Double.parseDouble(modeloFactura.getValueAt(i, 1).toString());
             } catch (Exception ignored) {}
         }
-        subtotalField.setText(String.format("%.2f", subtotal));
 
-        double desc = 0, rec = 0;
+        double desc = 0.0, rec = 0.0;
         try { desc = Double.parseDouble(descuentoField.getText()) / 100.0; } catch (Exception ignored) {}
-        try { rec   = Double.parseDouble(recargoField.getText())   / 100.0; } catch (Exception ignored) {}
+        try { rec  = Double.parseDouble(recargoField.getText())   / 100.0; } catch (Exception ignored) {}
 
-        double total = subtotal - (subtotal * desc) + (subtotal * rec);
+        // Subtotal muestra el monto con descuento aplicado
+        double subtotalConDesc = subtotalBruto * (1.0 - Math.max(0.0, desc));
+        subtotalField.setText(String.format("%.2f", subtotalConDesc));
+
+        // Total aplica recargo sobre el subtotal ya descontado
+        double total = subtotalConDesc * (1.0 + Math.max(0.0, rec));
         totalField.setText(String.format("%.2f", total));
         saldoField.setText(String.format("%.2f", total));
     }
@@ -438,6 +477,8 @@ public class VentanaDetallesOrdenes {
             if (ventanaPadre != null) {
                 ventanaPadre.refrescarTabla();
             }
+            // Refrescar resultados para que se refleje de inmediato
+            VentanaResultados.refrescarTodas();
         });
 
         // Cargar orden por número

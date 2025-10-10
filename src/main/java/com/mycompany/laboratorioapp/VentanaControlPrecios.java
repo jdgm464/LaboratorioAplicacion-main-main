@@ -31,6 +31,7 @@ public class VentanaControlPrecios {
 
     // Tabla inferior
     private final DefaultTableModel modeloTabla;
+    private java.util.List<Examen> examenesCargados = new java.util.ArrayList<>();
 
     public VentanaControlPrecios() {
         frame = new JFrame("Control de Precios");
@@ -137,7 +138,28 @@ public class VentanaControlPrecios {
         frame.add(new JScrollPane(contenido), BorderLayout.CENTER);
 
         // ====== Eventos de habilitación ======
-        chkPorNivel.addActionListener(e -> comboNivelPrecio.setEnabled(chkPorNivel.isSelected()));
+        chkPorNivel.addActionListener(e -> {
+            comboNivelPrecio.setEnabled(chkPorNivel.isSelected());
+            if (chkPorNivel.isSelected()) {
+                // Intentar cargar la ruta recordada y lista de precios
+                try {
+                    if (BaseDeDatosExcel.getListaPreciosPath() == null || BaseDeDatosExcel.getListaPreciosPath().isBlank()) {
+                        BaseDeDatosExcel.cargarRutaListaPreciosDesdeConfig();
+                    }
+                    String path = BaseDeDatosExcel.getListaPreciosPath();
+                    if (path == null || path.isBlank()) {
+                        // si no hay path, intentar defaults
+                        try { BaseDeDatosExcel.cargarDesdeExcel("lista precios examenes.xlsx"); BaseDeDatosExcel.cargarListaPrecios("lista precios examenes.xlsx"); BaseDeDatosExcel.setListaPreciosPath("lista precios examenes.xlsx"); }
+                        catch (Exception ex) { try { BaseDeDatosExcel.cargarDesdeExcel("resources/lista precios examenes.xlsx"); BaseDeDatosExcel.cargarListaPrecios("resources/lista precios examenes.xlsx"); BaseDeDatosExcel.setListaPreciosPath("resources/lista precios examenes.xlsx"); } catch (Exception ignored) {} }
+                    } else {
+                        try { BaseDeDatosExcel.cargarDesdeExcel(path); BaseDeDatosExcel.cargarListaPrecios(path); }
+                        catch (Exception ex) { javax.swing.JOptionPane.showMessageDialog(frame, "No se pudo abrir la lista de precios: " + ex.getMessage()); }
+                    }
+                    examenesCargados = BaseDeDatosExcel.getExamenes();
+                    llenarTablaConPrecios();
+                } catch (Exception ignored) {}
+            }
+        });
         chkPorArea.addActionListener(e -> {
             boolean on = chkPorArea.isSelected();
             comboArea.setEnabled(on);
@@ -164,6 +186,16 @@ public class VentanaControlPrecios {
         comboAreaPrecio.addActionListener(refrescarTabla);
         comboGrupo.addActionListener(refrescarTabla);
         comboGrupoPrecio.addActionListener(refrescarTabla);
+
+        // Habilitar edición y guardado de precios desde la tabla (columna Precio)
+        JButton btnGuardarCambios = new JButton("Guardar cambios");
+        btnGuardarCambios.addActionListener(e -> guardarCambiosEnExcel());
+        JPanel acciones = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 4));
+        JButton btnSeleccionarExcel = new JButton("Seleccionar Excel...");
+        btnSeleccionarExcel.addActionListener(e -> seleccionarArchivoLista());
+        acciones.add(btnSeleccionarExcel);
+        acciones.add(btnGuardarCambios);
+        frame.add(acciones, BorderLayout.SOUTH);
     }
 
     private String[] generarListaNiveles() {
@@ -179,8 +211,6 @@ public class VentanaControlPrecios {
     }
 
     private void llenarTablaConPrecios() {
-        // Placeholder: aquí deberíamos leer de BaseDeDatosExcel los examenes y elegir la columna de precio según selección
-        // Por ahora, simulamos 5 filas con un precio calculado a partir del índice del combo seleccionado
         modeloTabla.setRowCount(0);
         String criterio = null;
         if (chkPorNivel.isSelected()) criterio = (String) comboNivelPrecio.getSelectedItem();
@@ -188,11 +218,26 @@ public class VentanaControlPrecios {
         else if (chkPorGrupo.isSelected()) criterio = (String) comboGrupoPrecio.getSelectedItem();
         if (criterio == null) return;
 
-        double base = 10.0;
-        int idx = Math.max(1, obtenerIndiceNivel(criterio));
-        for (int i = 1; i <= 5; i++) {
-            double precio = base * idx * i;
-            modeloTabla.addRow(new Object[]{String.format("E%03d", i), "Examen " + i, String.format("%.2f", precio)});
+        // Para DólarContado1, mostrar todos los exámenes con su precio actual desde BaseDeDatosExcel
+        if (criterio != null && criterio.equalsIgnoreCase("DólarContado1")) {
+            try {
+                // Cargar lista de precios si no está cargada
+                if (examenesCargados.isEmpty()) {
+                    // Intentar cargar cat 61logo + lista precios (para que estén los c 61digos)
+                    try { BaseDeDatosExcel.cargarDesdeExcel("lista precios examenes.xlsx"); }
+                    catch (Exception ex) { BaseDeDatosExcel.cargarDesdeExcel("resources/lista precios examenes.xlsx"); }
+                    examenesCargados = BaseDeDatosExcel.getExamenes();
+                    try { BaseDeDatosExcel.cargarListaPrecios("lista precios examenes.xlsx"); }
+                    catch (Exception ex) { try { BaseDeDatosExcel.cargarListaPrecios("resources/lista precios examenes.xlsx"); } catch (Exception ignored) {} }
+                }
+            } catch (Exception ignored) {}
+
+            for (Examen ex : examenesCargados) {
+                String codigo = ex.getCodigo() == null ? "" : ex.getCodigo();
+                Double p = BaseDeDatosExcel.getPrecioPorCodigo(codigo);
+                double precio = p != null ? p : ex.getPrecio();
+                modeloTabla.addRow(new Object[]{codigo, ex.getNombre(), String.format("%.2f", precio)});
+            }
         }
     }
 
@@ -204,4 +249,40 @@ public class VentanaControlPrecios {
     }
 
     public void mostrar() { frame.setVisible(true); }
+
+    private void guardarCambiosEnExcel() {
+        try {
+            for (int i = 0; i < modeloTabla.getRowCount(); i++) {
+                String codigo = String.valueOf(modeloTabla.getValueAt(i, 0));
+                String precioStr = String.valueOf(modeloTabla.getValueAt(i, 2));
+                try {
+                    double nuevoPrecio = Double.parseDouble(precioStr.replace(",", "."));
+                    BaseDeDatosExcel.actualizarPrecio(codigo, nuevoPrecio);
+                } catch (Exception ignored) {}
+            }
+            BaseDeDatosExcel.guardarListaPrecios();
+            javax.swing.JOptionPane.showMessageDialog(frame, "Cambios guardados en la lista de precios.");
+        } catch (Exception ex) {
+            javax.swing.JOptionPane.showMessageDialog(frame, "Error al guardar: " + ex.getMessage(), "Error", javax.swing.JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
+    private void seleccionarArchivoLista() {
+        javax.swing.JFileChooser chooser = new javax.swing.JFileChooser();
+        chooser.setDialogTitle("Seleccionar lista precios examenes.xlsx");
+        int r = chooser.showOpenDialog(frame);
+        if (r == javax.swing.JFileChooser.APPROVE_OPTION) {
+            java.io.File f = chooser.getSelectedFile();
+            try {
+                BaseDeDatosExcel.cargarDesdeExcel(f.getAbsolutePath());
+                BaseDeDatosExcel.cargarListaPrecios(f.getAbsolutePath());
+                BaseDeDatosExcel.guardarRutaListaPreciosEnConfig(f.getAbsolutePath());
+                BaseDeDatosExcel.setListaPreciosPath(f.getAbsolutePath());
+                examenesCargados = BaseDeDatosExcel.getExamenes();
+                llenarTablaConPrecios();
+            } catch (Exception ex) {
+                javax.swing.JOptionPane.showMessageDialog(frame, "No se pudo abrir: " + ex.getMessage(), "Error", javax.swing.JOptionPane.ERROR_MESSAGE);
+            }
+        }
+    }
 }

@@ -23,6 +23,7 @@ import javax.swing.table.DefaultTableModel;
 public class VentanaResultados {
     private final JFrame frame;
     private JTable tablaResultados;
+    private static final java.util.Set<VentanaResultados> INSTANCIAS = java.util.Collections.newSetFromMap(new java.util.WeakHashMap<>());
     // Filtros de búsqueda
     private JSpinner desdeSpinner;
     private JSpinner hastaSpinner;
@@ -149,6 +150,26 @@ public class VentanaResultados {
         panelInferior.add(panelBotones, BorderLayout.EAST);
 
         frame.add(panelInferior, BorderLayout.SOUTH);
+
+        // Registrar instancia y cargar datos iniciales
+        INSTANCIAS.add(this);
+        refrescarTabla();
+
+        // Abrir detalles con doble clic
+        tablaResultados.addMouseListener(new java.awt.event.MouseAdapter() {
+            @Override public void mouseClicked(java.awt.event.MouseEvent e) {
+                if (e.getClickCount() == 2) {
+                    int row = tablaResultados.getSelectedRow();
+                    if (row >= 0) {
+                        String nroOrden = String.valueOf(tablaResultados.getValueAt(row, 0));
+                        Orden o = OrdenManager.buscarPorNumero(nroOrden);
+                        if (o != null) {
+                            new VentanaDetallesResultados(o).mostrar();
+                        }
+                    }
+                }
+            }
+        });
     }
 
     public void mostrar() {
@@ -164,5 +185,37 @@ public class VentanaResultados {
             }
         };
         tablaResultados.setModel(model);
+    }
+
+    // Cargar datos desde OrdenManager y GestorPacientes
+    public final void refrescarTabla() {
+        java.util.List<Orden> ordenes = OrdenManager.getOrdenes();
+        String[] headers = {"Orden", "Cédula", "Nombres", "Apellidos", "Sexo", "Fecha", "Entidad", "Edad"};
+        DefaultTableModel model = new DefaultTableModel(headers, 0) {
+            @Override public boolean isCellEditable(int row, int column) { return false; }
+        };
+        for (Orden o : ordenes) {
+            Paciente p = GestorPacientes.buscarPorCedula(o.getCedula());
+            String sexo = ""; // No disponible en Paciente
+            String edad = p != null ? String.valueOf(p.getEdad()) : "";
+            model.addRow(new Object[]{
+                    o.getNumeroOrden(),
+                    o.getCedula(),
+                    o.getNombres(),
+                    o.getApellidos(),
+                    sexo,
+                    o.getFechaRegistro(),
+                    o.getEmpresa(),
+                    edad
+            });
+        }
+        tablaResultados.setModel(model);
+    }
+
+    // Permite refrescar todas las ventanas abiertas
+    public static void refrescarTodas() {
+        for (VentanaResultados vr : INSTANCIAS) {
+            if (vr != null) vr.refrescarTabla();
+        }
     }
 }
