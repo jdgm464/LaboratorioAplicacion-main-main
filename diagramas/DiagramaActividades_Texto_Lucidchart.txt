@@ -1,0 +1,550 @@
+================================================================================
+DIAGRAMAS DE ACTIVIDADES - CASOS DE USO
+Sistema de Laboratorio MABEROCA
+Formato para importar en Lucidchart
+================================================================================
+
+================================================================================
+DIAGRAMA 1: CU-001 - INICIAR SESIÓN
+================================================================================
+
+[Inicio]
+   |
+   v
+[Usuario ingresa nombre de usuario]
+   |
+   v
+[Usuario ingresa contraseña]
+   |
+   v
+[Usuario selecciona rol]
+   |
+   v
+[Validar credenciales en base de datos]
+   |
+   v
+   +---¿Credenciales válidas?---+
+   |                             |
+  SÍ                            NO
+   |                             |
+   v                             v
+[Establecer sesión]    [Mostrar mensaje de error]
+   |                             |
+   v                             v
+[Obtener ID de usuario]  [Permitir reintentar]
+   |                             |
+   v                             v
+[Mostrar interfaz principal]  [Fin]
+   |
+   v
+[Fin]
+
+================================================================================
+DIAGRAMA 2: CU-002 - REGISTRAR USUARIO
+================================================================================
+
+[Inicio]
+   |
+   v
+[Administrador accede a módulo de usuarios]
+   |
+   v
+[Administrador selecciona "Nuevo Usuario"]
+   |
+   v
+[Administrador completa datos del usuario]
+   |
+   Nota: Nombres, Apellidos, Usuario, Contraseña, Rol
+   |
+   v
+[Administrador configura permisos]
+   |
+   Nota: Módulos accesibles, Autorizaciones, Control de precios, Control de resultados
+   |
+   v
+[Validar datos ingresados]
+   |
+   v
+   +---¿Datos válidos?---+
+   |                     |
+  SÍ                    NO
+   |                     |
+   v                     v
+[Guardar usuario]  [Mostrar mensaje de error]
+   |                     |
+   v                     v
+[Mostrar confirmación]  [Permitir corregir datos]
+   |                     |
+   v                     v
+[Fin]                  [Fin]
+
+================================================================================
+DIAGRAMA 3: CU-005 - REGISTRAR PACIENTE
+================================================================================
+
+[Inicio]
+   |
+   v
+[Usuario accede a módulo de pacientes]
+   |
+   v
+[Usuario selecciona "Nuevo Paciente"]
+   |
+   v
+[Usuario completa datos del paciente]
+   |
+   Nota: Cédula, Nombres, Apellidos, Edad, Dirección, Teléfono, Correo, Sexo
+   |
+   v
+[Validar cédula única]
+   |
+   v
+   +---¿Cédula ya existe?---+
+   |                         |
+  SÍ                        NO
+   |                         |
+   v                         v
+[Mostrar error]    [Guardar paciente en BD]
+   |                         |
+   v                         v
+[Permitir modificar]    +---¿VentanaDetallesOrdenes abierta?---+
+   |                         |                                   |
+   v                         SÍ                                 NO
+[Fin]                       |                                   |
+                            v                                   v
+                    [Actualizar campos]              [Mostrar confirmación]
+                            |                                   |
+                            v                                   v
+                    [Mostrar confirmación]                    [Fin]
+                            |
+                            v
+                           [Fin]
+
+================================================================================
+DIAGRAMA 4: CU-006 - BUSCAR PACIENTE
+================================================================================
+
+[Inicio]
+   |
+   v
+[Usuario accede a módulo de pacientes]
+   |
+   v
+[Usuario ingresa criterio de búsqueda]
+   |
+   Nota: Puede buscar por Cédula, Nombre, Apellido
+   |
+   v
+[Buscar en base de datos]
+   |
+   v
+   +---¿Paciente encontrado?---+
+   |                            |
+  SÍ                           NO
+   |                            |
+   v                            v
+[Mostrar resultados]    [Mostrar mensaje "No encontrado"]
+   |                            |
+   v                            v
+[Usuario selecciona paciente]  [Ofrecer registrar nuevo]
+   |                            |
+   v                            v
+[Mostrar datos completos]      [Fin]
+   |
+   v
+[Fin]
+
+================================================================================
+DIAGRAMA 5: CU-009 - CREAR ORDEN
+================================================================================
+
+[Inicio]
+   |
+   v
+[Usuario accede a módulo de órdenes]
+   |
+   v
+[Usuario selecciona "Nueva Orden"]
+   |
+   v
+[Abrir formulario de orden]
+   |
+   v
+[Usuario ingresa cédula del paciente]
+   |
+   v
+[Buscar paciente en base de datos]
+   |
+   v
+   +---¿Paciente encontrado?---+
+   |                            |
+  SÍ                           NO
+   |                            |
+   v                            v
+[Cargar datos automáticamente]  [Mostrar opción "Registrar Paciente"]
+   |                            |
+   Nota: Nombre, Apellido,      |    +---¿Usuario registra?---+
+   Dirección, Teléfono,          |    |                       |
+   Correo, Sexo                  |   SÍ                      NO
+   |                            |    |                       |
+   v                            |    v                       v
+[Continuar]                     |  [Abrir registro]  [Ingresar manualmente]
+                                |    |                       |
+                                |    v                       |
+                                |  [Guardar paciente]        |
+                                |    |                       |
+                                |    v                       |
+                                |  [Cargar datos]            |
+                                |    |                       |
+                                +----+-----------------------+
+                                     |
+                                     v
+[Usuario selecciona exámenes]
+   |
+   v
+[Calcular total de la orden]
+   |
+   v
+[Usuario completa datos adicionales]
+   |
+   Nota: Número factura, Número control, Número lote
+   |
+   v
+[Validar datos de la orden]
+   |
+   v
+   +---¿Datos válidos?---+
+   |                      |
+  SÍ                     NO
+   |                      |
+   v                      v
+[Guardar orden]    [Mostrar error]
+   |                      |
+   v                      v
+[Guardar orden-exámenes]  [Permitir corregir]
+   |                      |
+   v                      v
+[Mostrar confirmación]   [Fin]
+   |
+   v
+[Fin]
+
+================================================================================
+DIAGRAMA 6: CU-013 - REGISTRAR PACIENTE DESDE ORDEN
+================================================================================
+
+[Inicio]
+   |
+   v
+[Usuario está en formulario de orden]
+   |
+   v
+[Usuario hace clic en "Registrar Paciente"]
+   |
+   v
+[Abrir ventana de registro de paciente]
+   |
+   v
+[Usuario completa datos del paciente]
+   |
+   Nota: Cédula, Nombres, Apellidos, Edad, Dirección, Teléfono, Correo, Sexo
+   |
+   v
+[Validar datos]
+   |
+   v
+   +---¿Datos válidos?---+
+   |                     |
+  SÍ                    NO
+   |                     |
+   v                     v
+[Guardar paciente]  [Mostrar error]
+   |                     |
+   v                     v
+[Cerrar ventana]    [Permitir corregir]
+   |                     |
+   v                     v
+[Actualizar campos]     [Fin]
+   |
+   Nota: Los campos se actualizan automáticamente
+   sin necesidad de buscar el paciente
+   |
+   v
+[Mostrar confirmación]
+   |
+   v
+[Fin]
+
+================================================================================
+DIAGRAMA 7: CU-017 - INGRESAR RESULTADOS
+================================================================================
+
+[Inicio]
+   |
+   v
+[Bioanalista accede a módulo de resultados]
+   |
+   v
+[Mostrar lista de órdenes activas]
+   |
+   v
+[Bioanalista selecciona orden]
+   |
+   v
+[Cargar datos de la orden]
+   |
+   Nota: Datos del paciente, Lista de exámenes, Información de la orden
+   |
+   v
+[Mostrar formulario de resultados]
+   |
+   v
+[Bioanalista ingresa valores de exámenes]
+   |
+   Nota: Para cada examen: Valor obtenido, Unidad de medida, Valores de referencia
+   |
+   v
+[Validar valores ingresados]
+   |
+   v
+   +---¿Valores válidos?---+
+   |                       |
+  SÍ                      NO
+   |                       |
+   v                       v
+[Guardar resultados]  [Mostrar error]
+   |                       |
+   v                       v
+[Actualizar estado orden]  [Permitir corregir]
+   |                       |
+   v                       v
+[Mostrar confirmación]    [Fin]
+   |
+   v
+[Fin]
+
+================================================================================
+DIAGRAMA 8: CU-018 - FINALIZAR RESULTADOS
+================================================================================
+
+[Inicio]
+   |
+   v
+[Bioanalista ha ingresado resultados]
+   |
+   v
+[Verificar que todos los exámenes tengan resultados]
+   |
+   v
+   +---¿Todos completos?---+
+   |                       |
+  SÍ                      NO
+   |                       |
+   v                       v
+[Seleccionar "Finalizar"]  [Mostrar advertencia]
+   |                       |
+   v                       v
+[Validar completitud]     [Indicar exámenes faltantes]
+   |                       |
+   v                       v
+[Marcar orden finalizada]  [Permitir completar]
+   |                       |
+   v                       v
+[Actualizar en BD]        [Fin]
+   |                       |
+   v                       |
+[Mostrar confirmación]     |
+   |                       |
+   v                       |
+[Fin]                      |
+
+================================================================================
+DIAGRAMA 9: CU-011 - MODIFICAR ORDEN
+================================================================================
+
+[Inicio]
+   |
+   v
+[Usuario accede a módulo de órdenes]
+   |
+   v
+[Usuario busca orden]
+   |
+   v
+[Usuario selecciona orden a modificar]
+   |
+   v
+[Verificar estado de la orden]
+   |
+   v
+   +---¿Orden finalizada?---+
+   |                        |
+  SÍ                       NO
+   |                        |
+   v                        v
+[Mostrar error]    [Cargar datos de la orden]
+   |                        |
+   Nota: No se puede         |
+   modificar orden           |
+   finalizada                |
+   |                        v
+   |                [Mostrar formulario]
+   |                        |
+   |                        v
+   |                [Usuario modifica datos]
+   |                        |
+   |                        v
+   |                [Validar cambios]
+   |                        |
+   |                        v
+   |                +---¿Cambios válidos?---+
+   |                        |               |
+   |                       SÍ              NO
+   |                        |               |
+   |                        v               v
+   |                [Actualizar orden]  [Mostrar error]
+   |                        |               |
+   |                        v               v
+   |                [Mostrar confirmación] [Permitir corregir]
+   |                        |               |
+   +------------------------+---------------+
+                            |
+                            v
+                           [Fin]
+
+================================================================================
+DIAGRAMA 10: CU-012 - ANULAR ORDEN
+================================================================================
+
+[Inicio]
+   |
+   v
+[Administrador accede a módulo de órdenes]
+   |
+   v
+[Administrador busca orden]
+   |
+   v
+[Administrador selecciona orden a anular]
+   |
+   v
+[Verificar permisos del administrador]
+   |
+   v
+   +---¿Tiene permiso?---+
+   |                     |
+  SÍ                    NO
+   |                     |
+   v                     v
+[Solicitar confirmación]  [Mostrar error de permisos]
+   |                     |
+   v                     v
+   +---¿Confirma?---+
+   |                |     |
+  SÍ               NO     |
+   |                |     |
+   v                v     v
+[Marcar anulada]  [Cancelar]  [Fin]
+   |                |
+   v                v
+[Actualizar BD]   [Fin]
+   |                |
+   v                |
+[Mostrar confirmación]
+   |
+   v
+[Fin]
+
+================================================================================
+DIAGRAMA 11: FLUJO COMPLETO - CREAR ORDEN Y PROCESAR RESULTADOS
+================================================================================
+
+[Inicio]
+   |
+   v
+[Iniciar sesión en la aplicación]
+   |
+   v
+[Acceder a módulo de órdenes]
+   |
+   v
+[Crear nueva orden]
+   |
+   v
+[Ingresar o buscar paciente]
+   |
+   v
+   +---¿Paciente existe?---+
+   |                       |
+  SÍ                      NO
+   |                       |
+   |                       v
+   |              [Registrar nuevo paciente]
+   |                       |
+   +-----------------------+
+   |
+   v
+[Seleccionar exámenes]
+   |
+   v
+[Guardar orden]
+   |
+   v
+[Acceder a módulo de resultados]
+   |
+   v
+[Seleccionar orden]
+   |
+   v
+[Ingresar resultados de exámenes]
+   |
+   v
+[Validar resultados]
+   |
+   v
+   +---¿Resultados completos?---+
+   |                            |
+  SÍ                           NO
+   |                            |
+   |                            v
+   |                    [Completar resultados faltantes]
+   |                            |
+   +----------------------------+
+   |
+   v
+[Finalizar resultados]
+   |
+   v
+[Marcar orden como finalizada]
+   |
+   v
+[Fin]
+
+================================================================================
+INSTRUCCIONES PARA LUCIDCHART
+================================================================================
+
+1. FORMATO DE CAJAS:
+   - Usar rectángulos con esquinas redondeadas para actividades
+   - Usar rombos para decisiones (condiciones)
+   - Usar elipses para inicio/fin
+
+2. FLUJO:
+   - Flechas hacia abajo para flujo principal
+   - Etiquetar flechas con "Sí" o "No" en decisiones
+   - Usar notas para información adicional
+
+3. COLORES SUGERIDOS:
+   - Inicio/Fin: Verde (#4CAF50)
+   - Actividades: Azul claro (#E3F2FD)
+   - Decisiones: Amarillo (#FFF9C4)
+   - Errores: Rojo claro (#FFEBEE)
+   - Confirmaciones: Verde claro (#E8F5E9)
+
+4. ORGANIZACIÓN:
+   - Cada diagrama puede ser una página separada
+   - Mantener flujo de arriba hacia abajo
+   - Agrupar actividades relacionadas
+
+================================================================================
+

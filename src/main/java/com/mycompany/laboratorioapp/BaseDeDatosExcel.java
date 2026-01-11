@@ -1,7 +1,11 @@
 package com.mycompany.laboratorioapp;
 
+import com.mycompany.laboratorioapp.dao.ExamenDAO;
+import com.mycompany.laboratorioapp.dao.PacienteDAO;
+import com.mycompany.laboratorioapp.examenes.Examen;
+import com.mycompany.laboratorioapp.pacientes.Paciente;
+
 import java.io.FileInputStream;
-import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.poi.ss.usermodel.Cell;
@@ -12,32 +16,49 @@ import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 
 
 public class BaseDeDatosExcel {
-    // Métodos vacíos para evitar errores de compilación
+    // Métodos que ahora usan los DAOs
     public static void guardarPaciente(java.util.Map<String, String> datos) {
-        // Implementar lógica real aquí
+        try {
+            Paciente paciente = new Paciente(
+                datos.getOrDefault("cedula", ""),
+                datos.getOrDefault("nombre", ""),
+                datos.getOrDefault("apellido", ""),
+                Integer.parseInt(datos.getOrDefault("edad", "0")),
+                datos.getOrDefault("direccion", ""),
+                datos.getOrDefault("telefono", ""),
+                datos.getOrDefault("correo", "")
+            );
+            PacienteDAO.insertar(paciente);
+        } catch (Exception e) {
+            System.err.println("Error al guardar paciente: " + e.getMessage());
+        }
     }
 
     public static void actualizarPaciente(String cedula, java.util.Map<String, String> datos) {
-        // Implementar lógica real aquí
+        try {
+            Paciente paciente = new Paciente(
+                cedula,
+                datos.getOrDefault("nombre", ""),
+                datos.getOrDefault("apellido", ""),
+                Integer.parseInt(datos.getOrDefault("edad", "0")),
+                datos.getOrDefault("direccion", ""),
+                datos.getOrDefault("telefono", ""),
+                datos.getOrDefault("correo", "")
+            );
+            PacienteDAO.actualizar(paciente);
+        } catch (Exception e) {
+            System.err.println("Error al actualizar paciente: " + e.getMessage());
+        }
     }
 
     public static void borrarPaciente(String cedula) {
-        // Implementar lógica real aquí
+        PacienteDAO.eliminar(cedula);
     }
-    // Lista de pacientes en memoria
-    private final static List<Paciente> pacientes = new ArrayList<>();
 
-    // Método para buscar paciente por cédula
+    // Método para buscar paciente por cédula (ahora usa DAO)
     public static Paciente buscarPacientePorCedula(String cedula) {
-        for (Paciente p : pacientes) {
-            if (p.getCedula().equals(cedula)) {
-                return p;
-            }
-        }
-        return null;
+        return PacienteDAO.buscarPorCedula(cedula);
     }
-    private final static List<Examen> examenes = new ArrayList<>();
-    private final static java.util.Map<String, Double> preciosPorCodigo = new java.util.HashMap<>();
     private static String listaPreciosPath;
     private static final String CONFIG_DIR = System.getProperty("user.home") + java.io.File.separator + ".laboratorioapp";
     private static final String CONFIG_FILE = CONFIG_DIR + java.io.File.separator + "config.properties";
@@ -52,14 +73,10 @@ public class BaseDeDatosExcel {
         return entidades;
     }
 
-    // Cargar exámenes desde archivo de exámenes (catálogo clínico)
+    // Cargar exámenes desde archivo de exámenes (catálogo clínico) y guardarlos en BD
     public static void cargarDesdeExcel(String rutaArchivo) throws Exception {
-        examenes.clear();
-        preciosPorCodigo.clear();
-
         try (FileInputStream fis = new FileInputStream(rutaArchivo);
              Workbook workbook = new XSSFWorkbook(fis)) {
-
 
             // Buscar hoja con nombre alternativo si no existe 'Examenes'
             Sheet sheet = workbook.getSheet("Examenes");
@@ -82,8 +99,9 @@ public class BaseDeDatosExcel {
 
                 if (nombreCell == null || precioCell == null) continue;
 
-
                 String codigo = codigoCell != null ? codigoCell.toString().trim() : null;
+                if (codigo == null || codigo.isBlank()) continue;
+                
                 String nombre;
                 switch (nombreCell.getCellType()) {
                     case STRING -> nombre = nombreCell.getStringCellValue();
@@ -104,18 +122,23 @@ public class BaseDeDatosExcel {
                     default -> precio = 0.0;
                 }
 
-                Examen ex = new Examen(codigo, nombre, precio);
-                examenes.add(ex);
-                if (codigo != null && !codigo.isBlank()) preciosPorCodigo.put(codigo, precio);
+                // Guardar en la base de datos
+                Examen examen = new Examen(codigo, nombre, precio);
+                Examen existente = ExamenDAO.buscarPorCodigo(codigo);
+                if (existente != null) {
+                    ExamenDAO.actualizar(examen);
+                } else {
+                    ExamenDAO.insertar(examen);
+                }
             }
         }
     }
 
     public static List<Examen> getExamenes() {
-        return examenes;
+        return ExamenDAO.obtenerTodos();
     }
 
-    // Cargar precios desde "lista precios examenes" y exponerlos como DolarContado1
+    // Cargar precios desde "lista precios examenes" y actualizar en BD
     public static void cargarListaPrecios(String rutaArchivo) throws Exception {
         listaPreciosPath = rutaArchivo;
         try (FileInputStream fis = new FileInputStream(rutaArchivo); Workbook workbook = new XSSFWorkbook(fis)) {
@@ -127,6 +150,8 @@ public class BaseDeDatosExcel {
                 Cell precioCell = row.getCell(2);
                 if (codigoCell == null || precioCell == null) continue;
                 String codigo = codigoCell.toString().trim();
+                if (codigo.isBlank()) continue;
+                
                 double precio;
                 switch (precioCell.getCellType()) {
                     case NUMERIC -> precio = precioCell.getNumericCellValue();
@@ -136,17 +161,27 @@ public class BaseDeDatosExcel {
                     }
                     default -> precio = 0.0;
                 }
-                preciosPorCodigo.put(codigo, precio);
+                
+                // Actualizar precio en la base de datos
+                Examen examen = ExamenDAO.buscarPorCodigo(codigo);
+                if (examen != null) {
+                    examen = new Examen(codigo, examen.getNombre(), precio);
+                    ExamenDAO.actualizar(examen);
+                }
             }
         }
     }
 
     public static Double getPrecioPorCodigo(String codigo) {
-        return preciosPorCodigo.get(codigo);
+        return ExamenDAO.obtenerPrecio(codigo);
     }
 
     public static void actualizarPrecio(String codigo, double nuevoPrecio) {
-        preciosPorCodigo.put(codigo, nuevoPrecio);
+        Examen examen = ExamenDAO.buscarPorCodigo(codigo);
+        if (examen != null) {
+            examen = new Examen(codigo, examen.getNombre(), nuevoPrecio);
+            ExamenDAO.actualizar(examen);
+        }
     }
 
     public static void setListaPreciosPath(String path) { listaPreciosPath = path; }
@@ -186,10 +221,12 @@ public class BaseDeDatosExcel {
                 org.apache.poi.ss.usermodel.Cell codigoCell = row.getCell(0);
                 if (codigoCell == null) continue;
                 String codigo = codigoCell.toString().trim();
-                if (preciosPorCodigo.containsKey(codigo)) {
+                // Obtener precio desde la base de datos
+                Double precio = ExamenDAO.obtenerPrecio(codigo);
+                if (precio != null) {
                     org.apache.poi.ss.usermodel.Cell precioCell = row.getCell(2);
                     if (precioCell == null) precioCell = row.createCell(2);
-                    precioCell.setCellValue(preciosPorCodigo.get(codigo));
+                    precioCell.setCellValue(precio);
                 }
             }
             try (java.io.FileOutputStream fos = new java.io.FileOutputStream(listaPreciosPath)) {

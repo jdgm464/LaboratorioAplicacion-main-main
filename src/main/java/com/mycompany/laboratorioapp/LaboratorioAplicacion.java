@@ -1,5 +1,6 @@
 package com.mycompany.laboratorioapp;
 
+import com.mycompany.laboratorioapp.usuarios.login;
 import javax.swing.SwingUtilities;
 
 public class LaboratorioAplicacion {

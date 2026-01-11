@@ -1,0 +1,320 @@
+@startuml DiagramaSecuencia_Login
+title Diagrama de Secuencia - Inicio de Sesión
+
+actor Usuario
+participant "login" as Login
+participant "UsuarioDAO" as DAO
+participant "SesionUsuario" as Sesion
+participant "InterfazPrincipal" as Interfaz
+database "MySQL" as DB
+
+Usuario -> Login: Ingresa usuario, contraseña, rol
+Login -> DAO: buscarPorCredenciales(usuario, password)
+DAO -> DB: SELECT * FROM usuarios WHERE usuario=? AND password=?
+DB --> DAO: Resultado
+DAO --> Login: Usuario encontrado
+
+alt Usuario válido
+    Login -> Login: Validar rol
+    Login -> DAO: obtenerIdPorUsuario(usuario)
+    DAO -> DB: SELECT id FROM usuarios WHERE usuario=?
+    DB --> DAO: ID usuario
+    DAO --> Login: usuarioId
+    Login -> Sesion: establecerUsuario(usuario)
+    Sesion -> DAO: obtenerIdPorUsuario(usuario)
+    DAO -> DB: SELECT id FROM usuarios WHERE usuario=?
+    DB --> DAO: usuarioId
+    DAO --> Sesion: usuarioId
+    Login -> Login: dispose()
+    Login -> Interfaz: new InterfazPrincipal(usuario, rol)
+    Interfaz -> Interfaz: mostrar()
+    Interfaz --> Usuario: Muestra interfaz principal
+else Credenciales inválidas
+    Login --> Usuario: Muestra mensaje de error
+end
+
+@enduml
+
+@startuml DiagramaSecuencia_CrearOrden
+title Diagrama de Secuencia - Crear Orden Completa
+
+actor Usuario
+participant "InterfazPrincipal" as Interfaz
+participant "VentanaOrdenes" as VentanaOrdenes
+participant "VentanaDetallesOrdenes" as DetallesOrdenes
+participant "GestorPacientes" as GestorPac
+participant "PacienteDAO" as PacienteDAO
+participant "OrdenManager" as OrdenManager
+participant "OrdenDAO" as OrdenDAO
+participant "ExamenDAO" as ExamenDAO
+database "MySQL" as DB
+
+Usuario -> Interfaz: Clic en "Órdenes"
+Interfaz -> VentanaOrdenes: new VentanaOrdenes()
+VentanaOrdenes -> VentanaOrdenes: mostrar()
+VentanaOrdenes --> Usuario: Muestra ventana de órdenes
+
+Usuario -> VentanaOrdenes: Clic en "Nuevo"
+VentanaOrdenes -> DetallesOrdenes: new VentanaDetallesOrdenes()
+DetallesOrdenes -> DetallesOrdenes: mostrar()
+DetallesOrdenes --> Usuario: Muestra formulario de orden
+
+Usuario -> DetallesOrdenes: Ingresa cédula del paciente
+DetallesOrdenes -> DetallesOrdenes: cargarDatosPaciente(cedula)
+DetallesOrdenes -> GestorPac: buscarPorCedula(cedula)
+GestorPac -> PacienteDAO: buscarPorCedula(cedula)
+PacienteDAO -> DB: SELECT * FROM pacientes WHERE cedula=?
+DB --> PacienteDAO: Datos del paciente
+PacienteDAO --> GestorPac: Paciente
+GestorPac --> DetallesOrdenes: Paciente
+
+alt Paciente encontrado
+    DetallesOrdenes -> DetallesOrdenes: Rellenar campos automáticamente
+    DetallesOrdenes --> Usuario: Campos rellenados (nombre, apellido, dirección, teléfono, correo, sexo)
+else Paciente no encontrado
+    Usuario -> DetallesOrdenes: Clic en "Registrar Paciente"
+    DetallesOrdenes -> DetallesOrdenes: abrirRegistroPaciente()
+    DetallesOrdenes -> DetallesOrdenes: new VentanaRegistroPacientes(this)
+    DetallesOrdenes --> Usuario: Muestra formulario de registro
+    Usuario -> DetallesOrdenes: Completa datos y guarda
+    DetallesOrdenes -> GestorPac: guardarPaciente(paciente)
+    GestorPac -> PacienteDAO: insertar(paciente)
+    PacienteDAO -> DB: INSERT INTO pacientes (...)
+    DB --> PacienteDAO: Confirmación
+    PacienteDAO --> GestorPac: true
+    GestorPac --> DetallesOrdenes: Paciente guardado
+    DetallesOrdenes -> DetallesOrdenes: cargarPacienteCompleto(paciente)
+    DetallesOrdenes --> Usuario: Campos rellenados automáticamente
+end
+
+Usuario -> DetallesOrdenes: Selecciona exámenes
+DetallesOrdenes -> ExamenDAO: obtenerTodos()
+ExamenDAO -> DB: SELECT * FROM examenes
+DB --> ExamenDAO: Lista de exámenes
+ExamenDAO --> DetallesOrdenes: Lista de exámenes
+DetallesOrdenes --> Usuario: Muestra lista de exámenes disponibles
+Usuario -> DetallesOrdenes: Selecciona exámenes y confirma
+DetallesOrdenes -> DetallesOrdenes: Calcular total
+
+Usuario -> DetallesOrdenes: Clic en "Guardar"
+DetallesOrdenes -> DetallesOrdenes: Validar datos
+DetallesOrdenes -> OrdenManager: crearOrden(datos)
+OrdenManager -> OrdenDAO: insertar(orden, usuarioId)
+OrdenDAO -> DB: BEGIN TRANSACTION
+OrdenDAO -> DB: SELECT id FROM pacientes WHERE cedula=?
+DB --> OrdenDAO: pacienteId
+
+alt Paciente no existe en BD
+    OrdenDAO -> OrdenDAO: crearPacienteSiNoExiste(orden)
+    OrdenDAO -> DB: INSERT INTO pacientes (...)
+    DB --> OrdenDAO: pacienteId generado
+end
+
+OrdenDAO -> DB: INSERT INTO ordenes (numero_orden, ..., sexo, ...)
+DB --> OrdenDAO: Confirmación
+OrdenDAO -> DB: SELECT id FROM ordenes WHERE numero_orden=?
+DB --> OrdenDAO: ordenId
+OrdenDAO -> DB: INSERT INTO orden_examenes (orden_id, examen_codigo, precio)
+DB --> OrdenDAO: Confirmación
+OrdenDAO -> DB: COMMIT
+OrdenDAO --> OrdenManager: true
+OrdenManager --> DetallesOrdenes: Orden creada
+DetallesOrdenes --> Usuario: Muestra mensaje de éxito
+
+@enduml
+
+@startuml DiagramaSecuencia_RegistrarPaciente
+title Diagrama de Secuencia - Registrar Paciente
+
+actor Usuario
+participant "VentanaRegistroPacientes" as Registro
+participant "GestorPacientes" as Gestor
+participant "PacienteDAO" as DAO
+database "MySQL" as DB
+
+Usuario -> Registro: Abre ventana de registro
+Registro -> Registro: mostrar()
+Registro --> Usuario: Muestra formulario
+
+Usuario -> Registro: Completa datos (cédula, nombres, apellidos, edad, dirección, teléfono, correo, sexo)
+Usuario -> Registro: Clic en "Guardar"
+Registro -> Registro: validarDatos()
+
+alt Datos válidos
+    Registro -> Registro: Crear objeto Paciente
+    Registro -> Gestor: guardarPaciente(paciente)
+    Gestor -> DAO: insertar(paciente)
+    DAO -> DB: INSERT INTO pacientes (cedula, nombre, apellido, edad, direccion, telefono, correo, sexo) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    DB --> DAO: Confirmación
+    DAO --> Gestor: true
+    Gestor --> Registro: Paciente guardado
+    Registro -> Registro: Mostrar mensaje de éxito
+    
+    alt VentanaDetallesOrdenes está abierta
+        Registro -> Registro: Obtener referencia a VentanaDetallesOrdenes
+        Registro -> Registro: cargarPacienteCompleto(paciente)
+        Registro --> Usuario: Campos en DetallesOrdenes actualizados automáticamente
+    end
+    
+    Registro -> Registro: dispose()
+else Datos inválidos
+    Registro --> Usuario: Muestra mensaje de error
+end
+
+@enduml
+
+@startuml DiagramaSecuencia_IngresarResultados
+title Diagrama de Secuencia - Ingresar Resultados de Exámenes
+
+actor Bioanalista
+participant "InterfazPrincipal" as Interfaz
+participant "VentanaResultados" as Resultados
+participant "OrdenDAO" as OrdenDAO
+participant "ResultadoDAO" as ResultadoDAO
+database "MySQL" as DB
+
+Bioanalista -> Interfaz: Clic en "Resultados"
+Interfaz -> Resultados: new VentanaResultados()
+Resultados -> Resultados: mostrar()
+Resultados --> Bioanalista: Muestra ventana de resultados
+
+Resultados -> OrdenDAO: obtenerTodas()
+OrdenDAO -> DB: SELECT * FROM ordenes WHERE estatus='Activo'
+DB --> OrdenDAO: Lista de órdenes
+OrdenDAO --> Resultados: Lista de órdenes
+Resultados -> Resultados: Cargar tabla de órdenes
+Resultados --> Bioanalista: Muestra lista de órdenes
+
+Bioanalista -> Resultados: Selecciona orden
+Resultados -> OrdenDAO: buscarPorNumeroOrden(numeroOrden)
+OrdenDAO -> DB: SELECT * FROM ordenes WHERE numero_orden=?
+DB --> OrdenDAO: Datos de la orden
+OrdenDAO --> Resultados: Orden completa
+
+Resultados -> Resultados: Cargar datos del paciente y exámenes
+Resultados --> Bioanalista: Muestra formulario de resultados
+
+Bioanalista -> Resultados: Ingresa valores de exámenes
+Bioanalista -> Resultados: Clic en "Guardar Resultados"
+Resultados -> Resultados: Validar valores
+Resultados -> ResultadoDAO: guardarResultados(ordenId, resultados)
+ResultadoDAO -> DB: BEGIN TRANSACTION
+ResultadoDAO -> DB: INSERT INTO resultados (orden_id, examen_codigo, valor, unidad, referencia) VALUES (?, ?, ?, ?, ?)
+DB --> ResultadoDAO: Confirmación
+ResultadoDAO -> DB: UPDATE ordenes SET estatus='Finalizado' WHERE id=?
+DB --> ResultadoDAO: Confirmación
+ResultadoDAO -> DB: COMMIT
+ResultadoDAO --> Resultados: true
+Resultados --> Bioanalista: Muestra mensaje de éxito
+
+@enduml
+
+@startuml DiagramaSecuencia_GestionarUsuarios
+title Diagrama de Secuencia - Gestionar Usuarios (Administrador)
+
+actor Administrador
+participant "InterfazPrincipal" as Interfaz
+participant "VentanaRegistroUsuarios" as RegistroUsuarios
+participant "UsuarioDAO" as DAO
+database "MySQL" as DB
+
+Administrador -> Interfaz: Clic en "Usuarios"
+Interfaz -> RegistroUsuarios: new VentanaRegistroUsuarios()
+RegistroUsuarios -> RegistroUsuarios: mostrar()
+RegistroUsuarios --> Administrador: Muestra ventana de usuarios
+
+RegistroUsuarios -> DAO: obtenerTodos()
+DAO -> DB: SELECT * FROM usuarios
+DB --> DAO: Lista de usuarios
+DAO --> RegistroUsuarios: Lista de usuarios
+RegistroUsuarios --> Administrador: Muestra tabla de usuarios
+
+alt Crear nuevo usuario
+    Administrador -> RegistroUsuarios: Clic en "Nuevo Usuario"
+    RegistroUsuarios -> RegistroUsuarios: new Registro()
+    RegistroUsuarios --> Administrador: Muestra formulario de registro
+    Administrador -> RegistroUsuarios: Completa datos y permisos
+    Administrador -> RegistroUsuarios: Clic en "Guardar"
+    RegistroUsuarios -> DAO: insertar(usuario)
+    DAO -> DB: INSERT INTO usuarios (...)
+    DB --> DAO: Confirmación
+    DAO --> RegistroUsuarios: Usuario creado
+    RegistroUsuarios --> Administrador: Muestra mensaje de éxito
+else Modificar usuario
+    Administrador -> RegistroUsuarios: Selecciona usuario
+    Administrador -> RegistroUsuarios: Clic en "Modificar"
+    RegistroUsuarios -> DAO: buscarPorId(id)
+    DAO -> DB: SELECT * FROM usuarios WHERE id=?
+    DB --> DAO: Datos del usuario
+    DAO --> RegistroUsuarios: Usuario
+    RegistroUsuarios --> Administrador: Muestra formulario con datos
+    Administrador -> RegistroUsuarios: Modifica datos
+    Administrador -> RegistroUsuarios: Clic en "Guardar"
+    RegistroUsuarios -> DAO: actualizar(usuario)
+    DAO -> DB: UPDATE usuarios SET ... WHERE id=?
+    DB --> DAO: Confirmación
+    DAO --> RegistroUsuarios: Usuario actualizado
+    RegistroUsuarios --> Administrador: Muestra mensaje de éxito
+else Eliminar usuario
+    Administrador -> RegistroUsuarios: Selecciona usuario
+    Administrador -> RegistroUsuarios: Clic en "Eliminar"
+    RegistroUsuarios -> RegistroUsuarios: Solicitar confirmación
+    Administrador -> RegistroUsuarios: Confirma eliminación
+    RegistroUsuarios -> DAO: eliminar(id)
+    DAO -> DB: DELETE FROM usuarios WHERE id=?
+    DB --> DAO: Confirmación
+    DAO --> RegistroUsuarios: Usuario eliminado
+    RegistroUsuarios --> Administrador: Muestra mensaje de éxito
+end
+
+@enduml
+
+@startuml DiagramaSecuencia_FlujoCompleto
+title Diagrama de Secuencia - Flujo Completo: Orden → Resultados
+
+actor Usuario
+participant "VentanaOrdenes" as Ordenes
+participant "VentanaDetallesOrdenes" as Detalles
+participant "OrdenDAO" as OrdenDAO
+participant "VentanaResultados" as Resultados
+participant "ResultadoDAO" as ResultadoDAO
+database "MySQL" as DB
+
+== Crear Orden ==
+Usuario -> Ordenes: Crea nueva orden
+Ordenes -> Detalles: Abre formulario
+Usuario -> Detalles: Ingresa datos y selecciona exámenes
+Usuario -> Detalles: Guarda orden
+Detalles -> OrdenDAO: insertar(orden)
+OrdenDAO -> DB: INSERT INTO ordenes
+DB --> OrdenDAO: Orden creada
+OrdenDAO --> Detalles: Confirmación
+Detalles --> Usuario: Orden guardada
+
+== Procesar Resultados ==
+Usuario -> Resultados: Abre módulo de resultados
+Resultados -> OrdenDAO: obtenerTodas()
+OrdenDAO -> DB: SELECT * FROM ordenes
+DB --> OrdenDAO: Lista de órdenes
+OrdenDAO --> Resultados: Órdenes disponibles
+Resultados --> Usuario: Muestra órdenes
+
+Usuario -> Resultados: Selecciona orden
+Resultados -> OrdenDAO: buscarPorNumeroOrden(numeroOrden)
+OrdenDAO -> DB: SELECT * FROM ordenes WHERE numero_orden=?
+DB --> OrdenDAO: Datos completos
+OrdenDAO --> Resultados: Orden con paciente y exámenes
+Resultados --> Usuario: Muestra formulario de resultados
+
+Usuario -> Resultados: Ingresa valores
+Usuario -> Resultados: Guarda resultados
+Resultados -> ResultadoDAO: guardarResultados(resultados)
+ResultadoDAO -> DB: INSERT INTO resultados
+DB --> ResultadoDAO: Confirmación
+ResultadoDAO -> DB: UPDATE ordenes SET estatus='Finalizado'
+DB --> ResultadoDAO: Confirmación
+ResultadoDAO --> Resultados: Resultados guardados
+Resultados --> Usuario: Orden finalizada
+
+@enduml
+

@@ -42,24 +42,33 @@ public class CargarImagen {
         );
     }
 
-    // Cargar el fondo desde resources priorizando "fondo para la aplicacion.jpg" y con fallbacks
+    // Cargar el fondo desde resources priorizando "fondo para la aplicacion.jpeg" y con fallbacks
     public static ImageIcon obtenerFondo() {
         try {
             System.out.println("user.dir=" + System.getProperty("user.dir"));
+            System.out.println("classpath:/fondo para la aplicacion.jpeg= " + CargarImagen.class.getResource("/fondo para la aplicacion.jpeg"));
             System.out.println("classpath:/fondo para la aplicacion.jpg= " + CargarImagen.class.getResource("/fondo para la aplicacion.jpg"));
             System.out.println("classpath:/fondo.jpg= " + CargarImagen.class.getResource("/fondo.jpg"));
             System.out.println("classpath:/fondo.png= " + CargarImagen.class.getResource("/fondo.png"));
         } catch (Exception ignored) {}
         return cargarDesdeRutas(
-                // Prioridad: nombre exacto en resources
+                // Prioridad: nueva imagen con extensión .jpeg
+                "/fondo para la aplicacion.jpeg", "fondo para la aplicacion.jpeg",
+                // Sin espacio como fallback
                 "/fondo para la aplicacion.jpg", "fondo para la aplicacion.jpg",
+                // Con espacio como fallback
+                "/fondo para la aplicacion .jpg", "fondo para la aplicacion .jpg",
                 // Otras variantes comunes
                 "/fondo.jpg", "fondo.jpg",
                 "/fondo.png", "fondo.png",
                 // Fallbacks absolutos/relativos de desarrollo (sin Maven)
+                "src/main/resources/fondo para la aplicacion.jpeg",
                 "src/main/resources/fondo para la aplicacion.jpg",
                 "src/main/resources/fondo.jpg",
                 "src/main/resources/fondo.png",
+                "target/classes/fondo para la aplicacion.jpeg",
+                "target/classes/fondo para la aplicacion.jpg",
+                "resources/fondo para la aplicacion.jpeg",
                 "resources/fondo para la aplicacion.jpg",
                 "resources/fondo.jpg",
                 "resources/fondo.png"

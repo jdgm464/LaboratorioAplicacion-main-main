@@ -1,0 +1,361 @@
+================================================================================
+DIAGRAMAS DE SECUENCIA UML - SISTEMA DE LABORATORIO MABEROCA
+Formato para importar en Lucidchart
+================================================================================
+
+================================================================================
+DIAGRAMA 1: INICIO DE SESIÓN
+================================================================================
+
+Participantes:
+- Usuario
+- login
+- UsuarioDAO
+- SesionUsuario
+- InterfazPrincipal
+- MySQL (Base de Datos)
+
+Secuencia:
+
+Usuario -> login: Ingresa usuario, contraseña, rol
+login -> UsuarioDAO: buscarPorCredenciales(usuario, password)
+UsuarioDAO -> MySQL: SELECT * FROM usuarios WHERE usuario=? AND password=?
+MySQL --> UsuarioDAO: Resultado
+UsuarioDAO --> login: Usuario encontrado
+
+[Alt: Usuario válido]
+    login -> login: Validar rol
+    login -> UsuarioDAO: obtenerIdPorUsuario(usuario)
+    UsuarioDAO -> MySQL: SELECT id FROM usuarios WHERE usuario=?
+    MySQL --> UsuarioDAO: ID usuario
+    UsuarioDAO --> login: usuarioId
+    login -> SesionUsuario: establecerUsuario(usuario)
+    SesionUsuario -> UsuarioDAO: obtenerIdPorUsuario(usuario)
+    UsuarioDAO -> MySQL: SELECT id FROM usuarios WHERE usuario=?
+    MySQL --> UsuarioDAO: usuarioId
+    UsuarioDAO --> SesionUsuario: usuarioId
+    login -> login: dispose()
+    login -> InterfazPrincipal: new InterfazPrincipal(usuario, rol)
+    InterfazPrincipal -> InterfazPrincipal: mostrar()
+    InterfazPrincipal --> Usuario: Muestra interfaz principal
+
+[Alt: Credenciales inválidas]
+    login --> Usuario: Muestra mensaje de error
+
+================================================================================
+DIAGRAMA 2: CREAR ORDEN COMPLETA
+================================================================================
+
+Participantes:
+- Usuario
+- InterfazPrincipal
+- VentanaOrdenes
+- VentanaDetallesOrdenes
+- GestorPacientes
+- PacienteDAO
+- OrdenManager
+- OrdenDAO
+- ExamenDAO
+- MySQL (Base de Datos)
+
+Secuencia:
+
+Usuario -> InterfazPrincipal: Clic en "Órdenes"
+InterfazPrincipal -> VentanaOrdenes: new VentanaOrdenes()
+VentanaOrdenes -> VentanaOrdenes: mostrar()
+VentanaOrdenes --> Usuario: Muestra ventana de órdenes
+
+Usuario -> VentanaOrdenes: Clic en "Nuevo"
+VentanaOrdenes -> VentanaDetallesOrdenes: new VentanaDetallesOrdenes()
+VentanaDetallesOrdenes -> VentanaDetallesOrdenes: mostrar()
+VentanaDetallesOrdenes --> Usuario: Muestra formulario de orden
+
+Usuario -> VentanaDetallesOrdenes: Ingresa cédula del paciente
+VentanaDetallesOrdenes -> VentanaDetallesOrdenes: cargarDatosPaciente(cedula)
+VentanaDetallesOrdenes -> GestorPacientes: buscarPorCedula(cedula)
+GestorPacientes -> PacienteDAO: buscarPorCedula(cedula)
+PacienteDAO -> MySQL: SELECT * FROM pacientes WHERE cedula=?
+MySQL --> PacienteDAO: Datos del paciente
+PacienteDAO --> GestorPacientes: Paciente
+GestorPacientes --> VentanaDetallesOrdenes: Paciente
+
+[Alt: Paciente encontrado]
+    VentanaDetallesOrdenes -> VentanaDetallesOrdenes: Rellenar campos automáticamente
+    VentanaDetallesOrdenes --> Usuario: Campos rellenados (nombre, apellido, dirección, teléfono, correo, sexo)
+
+[Alt: Paciente no encontrado]
+    Usuario -> VentanaDetallesOrdenes: Clic en "Registrar Paciente"
+    VentanaDetallesOrdenes -> VentanaDetallesOrdenes: abrirRegistroPaciente()
+    VentanaDetallesOrdenes -> VentanaRegistroPacientes: new VentanaRegistroPacientes(this)
+    VentanaRegistroPacientes --> Usuario: Muestra formulario de registro
+    Usuario -> VentanaRegistroPacientes: Completa datos y guarda
+    VentanaRegistroPacientes -> GestorPacientes: guardarPaciente(paciente)
+    GestorPacientes -> PacienteDAO: insertar(paciente)
+    PacienteDAO -> MySQL: INSERT INTO pacientes (cedula, nombre, apellido, edad, direccion, telefono, correo, sexo) VALUES (...)
+    MySQL --> PacienteDAO: Confirmación
+    PacienteDAO --> GestorPacientes: true
+    GestorPacientes --> VentanaRegistroPacientes: Paciente guardado
+    VentanaRegistroPacientes -> VentanaDetallesOrdenes: cargarPacienteCompleto(paciente)
+    VentanaDetallesOrdenes --> Usuario: Campos rellenados automáticamente
+
+Usuario -> VentanaDetallesOrdenes: Selecciona exámenes
+VentanaDetallesOrdenes -> ExamenDAO: obtenerTodos()
+ExamenDAO -> MySQL: SELECT * FROM examenes
+MySQL --> ExamenDAO: Lista de exámenes
+ExamenDAO --> VentanaDetallesOrdenes: Lista de exámenes
+VentanaDetallesOrdenes --> Usuario: Muestra lista de exámenes disponibles
+Usuario -> VentanaDetallesOrdenes: Selecciona exámenes y confirma
+VentanaDetallesOrdenes -> VentanaDetallesOrdenes: Calcular total
+
+Usuario -> VentanaDetallesOrdenes: Clic en "Guardar"
+VentanaDetallesOrdenes -> VentanaDetallesOrdenes: Validar datos
+VentanaDetallesOrdenes -> OrdenManager: crearOrden(datos)
+OrdenManager -> OrdenDAO: insertar(orden, usuarioId)
+OrdenDAO -> MySQL: BEGIN TRANSACTION
+OrdenDAO -> MySQL: SELECT id FROM pacientes WHERE cedula=?
+MySQL --> OrdenDAO: pacienteId
+
+[Alt: Paciente no existe en BD]
+    OrdenDAO -> OrdenDAO: crearPacienteSiNoExiste(orden)
+    OrdenDAO -> MySQL: INSERT INTO pacientes (...)
+    MySQL --> OrdenDAO: pacienteId generado
+
+OrdenDAO -> MySQL: INSERT INTO ordenes (numero_orden, ..., sexo, ...)
+MySQL --> OrdenDAO: Confirmación
+OrdenDAO -> MySQL: SELECT id FROM ordenes WHERE numero_orden=?
+MySQL --> OrdenDAO: ordenId
+OrdenDAO -> MySQL: INSERT INTO orden_examenes (orden_id, examen_codigo, precio)
+MySQL --> OrdenDAO: Confirmación
+OrdenDAO -> MySQL: COMMIT
+OrdenDAO --> OrdenManager: true
+OrdenManager --> VentanaDetallesOrdenes: Orden creada
+VentanaDetallesOrdenes --> Usuario: Muestra mensaje de éxito
+
+================================================================================
+DIAGRAMA 3: REGISTRAR PACIENTE
+================================================================================
+
+Participantes:
+- Usuario
+- VentanaRegistroPacientes
+- GestorPacientes
+- PacienteDAO
+- MySQL (Base de Datos)
+
+Secuencia:
+
+Usuario -> VentanaRegistroPacientes: Abre ventana de registro
+VentanaRegistroPacientes -> VentanaRegistroPacientes: mostrar()
+VentanaRegistroPacientes --> Usuario: Muestra formulario
+
+Usuario -> VentanaRegistroPacientes: Completa datos (cédula, nombres, apellidos, edad, dirección, teléfono, correo, sexo)
+Usuario -> VentanaRegistroPacientes: Clic en "Guardar"
+VentanaRegistroPacientes -> VentanaRegistroPacientes: validarDatos()
+
+[Alt: Datos válidos]
+    VentanaRegistroPacientes -> VentanaRegistroPacientes: Crear objeto Paciente
+    VentanaRegistroPacientes -> GestorPacientes: guardarPaciente(paciente)
+    GestorPacientes -> PacienteDAO: insertar(paciente)
+    PacienteDAO -> MySQL: INSERT INTO pacientes (cedula, nombre, apellido, edad, direccion, telefono, correo, sexo) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    MySQL --> PacienteDAO: Confirmación
+    PacienteDAO --> GestorPacientes: true
+    GestorPacientes --> VentanaRegistroPacientes: Paciente guardado
+    VentanaRegistroPacientes -> VentanaRegistroPacientes: Mostrar mensaje de éxito
+    
+    [Alt: VentanaDetallesOrdenes está abierta]
+        VentanaRegistroPacientes -> VentanaDetallesOrdenes: cargarPacienteCompleto(paciente)
+        VentanaDetallesOrdenes --> Usuario: Campos en DetallesOrdenes actualizados automáticamente
+    
+    VentanaRegistroPacientes -> VentanaRegistroPacientes: dispose()
+
+[Alt: Datos inválidos]
+    VentanaRegistroPacientes --> Usuario: Muestra mensaje de error
+
+================================================================================
+DIAGRAMA 4: INGRESAR RESULTADOS DE EXÁMENES
+================================================================================
+
+Participantes:
+- Bioanalista
+- InterfazPrincipal
+- VentanaResultados
+- OrdenDAO
+- ResultadoDAO
+- MySQL (Base de Datos)
+
+Secuencia:
+
+Bioanalista -> InterfazPrincipal: Clic en "Resultados"
+InterfazPrincipal -> VentanaResultados: new VentanaResultados()
+VentanaResultados -> VentanaResultados: mostrar()
+VentanaResultados --> Bioanalista: Muestra ventana de resultados
+
+VentanaResultados -> OrdenDAO: obtenerTodas()
+OrdenDAO -> MySQL: SELECT * FROM ordenes WHERE estatus='Activo'
+MySQL --> OrdenDAO: Lista de órdenes
+OrdenDAO --> VentanaResultados: Lista de órdenes
+VentanaResultados -> VentanaResultados: Cargar tabla de órdenes
+VentanaResultados --> Bioanalista: Muestra lista de órdenes
+
+Bioanalista -> VentanaResultados: Selecciona orden
+VentanaResultados -> OrdenDAO: buscarPorNumeroOrden(numeroOrden)
+OrdenDAO -> MySQL: SELECT * FROM ordenes WHERE numero_orden=?
+MySQL --> OrdenDAO: Datos de la orden
+OrdenDAO --> VentanaResultados: Orden completa
+
+VentanaResultados -> VentanaResultados: Cargar datos del paciente y exámenes
+VentanaResultados --> Bioanalista: Muestra formulario de resultados
+
+Bioanalista -> VentanaResultados: Ingresa valores de exámenes
+Bioanalista -> VentanaResultados: Clic en "Guardar Resultados"
+VentanaResultados -> VentanaResultados: Validar valores
+VentanaResultados -> ResultadoDAO: guardarResultados(ordenId, resultados)
+ResultadoDAO -> MySQL: BEGIN TRANSACTION
+ResultadoDAO -> MySQL: INSERT INTO resultados (orden_id, examen_codigo, valor, unidad, referencia) VALUES (?, ?, ?, ?, ?)
+MySQL --> ResultadoDAO: Confirmación
+ResultadoDAO -> MySQL: UPDATE ordenes SET estatus='Finalizado' WHERE id=?
+MySQL --> ResultadoDAO: Confirmación
+ResultadoDAO -> MySQL: COMMIT
+ResultadoDAO --> VentanaResultados: true
+VentanaResultados --> Bioanalista: Muestra mensaje de éxito
+
+================================================================================
+DIAGRAMA 5: GESTIONAR USUARIOS (ADMINISTRADOR)
+================================================================================
+
+Participantes:
+- Administrador
+- InterfazPrincipal
+- VentanaRegistroUsuarios
+- UsuarioDAO
+- MySQL (Base de Datos)
+
+Secuencia:
+
+Administrador -> InterfazPrincipal: Clic en "Usuarios"
+InterfazPrincipal -> VentanaRegistroUsuarios: new VentanaRegistroUsuarios()
+VentanaRegistroUsuarios -> VentanaRegistroUsuarios: mostrar()
+VentanaRegistroUsuarios --> Administrador: Muestra ventana de usuarios
+
+VentanaRegistroUsuarios -> UsuarioDAO: obtenerTodos()
+UsuarioDAO -> MySQL: SELECT * FROM usuarios
+MySQL --> UsuarioDAO: Lista de usuarios
+UsuarioDAO --> VentanaRegistroUsuarios: Lista de usuarios
+VentanaRegistroUsuarios --> Administrador: Muestra tabla de usuarios
+
+[Alt: Crear nuevo usuario]
+    Administrador -> VentanaRegistroUsuarios: Clic en "Nuevo Usuario"
+    VentanaRegistroUsuarios -> Registro: new Registro()
+    VentanaRegistroUsuarios --> Administrador: Muestra formulario de registro
+    Administrador -> VentanaRegistroUsuarios: Completa datos y permisos
+    Administrador -> VentanaRegistroUsuarios: Clic en "Guardar"
+    VentanaRegistroUsuarios -> UsuarioDAO: insertar(usuario)
+    UsuarioDAO -> MySQL: INSERT INTO usuarios (...)
+    MySQL --> UsuarioDAO: Confirmación
+    UsuarioDAO --> VentanaRegistroUsuarios: Usuario creado
+    VentanaRegistroUsuarios --> Administrador: Muestra mensaje de éxito
+
+[Alt: Modificar usuario]
+    Administrador -> VentanaRegistroUsuarios: Selecciona usuario
+    Administrador -> VentanaRegistroUsuarios: Clic en "Modificar"
+    VentanaRegistroUsuarios -> UsuarioDAO: buscarPorId(id)
+    UsuarioDAO -> MySQL: SELECT * FROM usuarios WHERE id=?
+    MySQL --> UsuarioDAO: Datos del usuario
+    UsuarioDAO --> VentanaRegistroUsuarios: Usuario
+    VentanaRegistroUsuarios --> Administrador: Muestra formulario con datos
+    Administrador -> VentanaRegistroUsuarios: Modifica datos
+    Administrador -> VentanaRegistroUsuarios: Clic en "Guardar"
+    VentanaRegistroUsuarios -> UsuarioDAO: actualizar(usuario)
+    UsuarioDAO -> MySQL: UPDATE usuarios SET ... WHERE id=?
+    MySQL --> UsuarioDAO: Confirmación
+    UsuarioDAO --> VentanaRegistroUsuarios: Usuario actualizado
+    VentanaRegistroUsuarios --> Administrador: Muestra mensaje de éxito
+
+[Alt: Eliminar usuario]
+    Administrador -> VentanaRegistroUsuarios: Selecciona usuario
+    Administrador -> VentanaRegistroUsuarios: Clic en "Eliminar"
+    VentanaRegistroUsuarios -> VentanaRegistroUsuarios: Solicitar confirmación
+    Administrador -> VentanaRegistroUsuarios: Confirma eliminación
+    VentanaRegistroUsuarios -> UsuarioDAO: eliminar(id)
+    UsuarioDAO -> MySQL: DELETE FROM usuarios WHERE id=?
+    MySQL --> UsuarioDAO: Confirmación
+    UsuarioDAO --> VentanaRegistroUsuarios: Usuario eliminado
+    VentanaRegistroUsuarios --> Administrador: Muestra mensaje de éxito
+
+================================================================================
+DIAGRAMA 6: FLUJO COMPLETO - ORDEN → RESULTADOS
+================================================================================
+
+Participantes:
+- Usuario
+- VentanaOrdenes
+- VentanaDetallesOrdenes
+- OrdenDAO
+- VentanaResultados
+- ResultadoDAO
+- MySQL (Base de Datos)
+
+== Fase 1: Crear Orden ==
+Usuario -> VentanaOrdenes: Crea nueva orden
+VentanaOrdenes -> VentanaDetallesOrdenes: Abre formulario
+Usuario -> VentanaDetallesOrdenes: Ingresa datos y selecciona exámenes
+Usuario -> VentanaDetallesOrdenes: Guarda orden
+VentanaDetallesOrdenes -> OrdenDAO: insertar(orden)
+OrdenDAO -> MySQL: INSERT INTO ordenes
+MySQL --> OrdenDAO: Orden creada
+OrdenDAO --> VentanaDetallesOrdenes: Confirmación
+VentanaDetallesOrdenes --> Usuario: Orden guardada
+
+== Fase 2: Procesar Resultados ==
+Usuario -> VentanaResultados: Abre módulo de resultados
+VentanaResultados -> OrdenDAO: obtenerTodas()
+OrdenDAO -> MySQL: SELECT * FROM ordenes
+MySQL --> OrdenDAO: Lista de órdenes
+OrdenDAO --> VentanaResultados: Órdenes disponibles
+VentanaResultados --> Usuario: Muestra órdenes
+
+Usuario -> VentanaResultados: Selecciona orden
+VentanaResultados -> OrdenDAO: buscarPorNumeroOrden(numeroOrden)
+OrdenDAO -> MySQL: SELECT * FROM ordenes WHERE numero_orden=?
+MySQL --> OrdenDAO: Datos completos
+OrdenDAO --> VentanaResultados: Orden con paciente y exámenes
+VentanaResultados --> Usuario: Muestra formulario de resultados
+
+Usuario -> VentanaResultados: Ingresa valores
+Usuario -> VentanaResultados: Guarda resultados
+VentanaResultados -> ResultadoDAO: guardarResultados(resultados)
+ResultadoDAO -> MySQL: INSERT INTO resultados
+MySQL --> ResultadoDAO: Confirmación
+ResultadoDAO -> MySQL: UPDATE ordenes SET estatus='Finalizado'
+MySQL --> ResultadoDAO: Confirmación
+ResultadoDAO --> VentanaResultados: Resultados guardados
+VentanaResultados --> Usuario: Orden finalizada
+
+================================================================================
+NOTAS PARA LUCIDCHART:
+================================================================================
+
+1. Para importar en Lucidchart:
+   - Opción A: Usar el formato PlantUML (.puml) - Lucidchart soporta PlantUML
+   - Opción B: Crear manualmente usando estos diagramas como guía
+
+2. Símbolos a usar:
+   - Actor: Figura de persona
+   - Participante: Rectángulo con nombre
+   - Mensaje: Flecha sólida (sincrónica) o punteada (asíncrona)
+   - Activación: Rectángulo delgado en la línea de vida
+   - Alt: Cuadro con etiqueta [Alt: condición]
+
+3. Colores sugeridos:
+   - Usuario/Actor: Azul claro
+   - Ventanas UI: Verde claro
+   - DAOs: Amarillo claro
+   - Base de Datos: Gris
+   - Managers/Gestores: Naranja claro
+
+4. Organización:
+   - Cada diagrama puede ser una página separada en Lucidchart
+   - Agrupar diagramas relacionados en la misma página
+
+================================================================================
+

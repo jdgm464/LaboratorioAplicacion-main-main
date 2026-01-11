@@ -1,0 +1,398 @@
+@startuml DiagramaActividades_IniciarSesion
+title Diagrama de Actividades - CU-001: Iniciar Sesión
+
+start
+
+:Usuario ingresa nombre de usuario;
+:Usuario ingresa contraseña;
+:Usuario selecciona rol;
+
+:Validar credenciales en base de datos;
+
+if (Credenciales válidas?) then (Sí)
+    :Establecer sesión de usuario;
+    :Obtener ID de usuario;
+    :Mostrar interfaz principal;
+    stop
+else (No)
+    :Mostrar mensaje de error;
+    :Permitir reintentar;
+    stop
+endif
+
+@enduml
+
+@startuml DiagramaActividades_RegistrarUsuario
+title Diagrama de Actividades - CU-002: Registrar Usuario
+
+start
+
+:Administrador accede a módulo de usuarios;
+:Administrador selecciona "Nuevo Usuario";
+:Administrador completa datos del usuario;
+note right
+  - Nombres
+  - Apellidos
+  - Usuario
+  - Contraseña
+  - Rol
+end note
+
+:Administrador configura permisos;
+note right
+  - Módulos accesibles
+  - Autorizaciones
+  - Control de precios
+  - Control de resultados
+end note
+
+:Validar datos ingresados;
+
+if (Datos válidos?) then (Sí)
+    :Guardar usuario en base de datos;
+    :Mostrar mensaje de confirmación;
+    stop
+else (No)
+    :Mostrar mensaje de error;
+    :Permitir corregir datos;
+    stop
+endif
+
+@enduml
+
+@startuml DiagramaActividades_RegistrarPaciente
+title Diagrama de Actividades - CU-005: Registrar Paciente
+
+start
+
+:Usuario accede a módulo de pacientes;
+:Usuario selecciona "Nuevo Paciente";
+:Usuario completa datos del paciente;
+note right
+  - Cédula
+  - Nombres
+  - Apellidos
+  - Edad
+  - Dirección
+  - Teléfono
+  - Correo
+  - Sexo
+end note
+
+:Validar cédula única;
+
+if (Cédula ya existe?) then (Sí)
+    :Mostrar mensaje de error;
+    :Permitir modificar cédula;
+    stop
+else (No)
+    :Guardar paciente en base de datos;
+    if (VentanaDetallesOrdenes abierta?) then (Sí)
+        :Actualizar campos automáticamente;
+        note right
+          Los campos en la ventana
+          de órdenes se llenan
+          automáticamente
+        end note
+    endif
+    :Mostrar mensaje de confirmación;
+    stop
+endif
+
+@enduml
+
+@startuml DiagramaActividades_BuscarPaciente
+title Diagrama de Actividades - CU-006: Buscar Paciente
+
+start
+
+:Usuario accede a módulo de pacientes;
+:Usuario ingresa criterio de búsqueda;
+note right
+  Puede buscar por:
+  - Cédula
+  - Nombre
+  - Apellido
+end note
+
+:Buscar en base de datos;
+
+if (Paciente encontrado?) then (Sí)
+    :Mostrar resultados de búsqueda;
+    :Usuario selecciona paciente;
+    :Mostrar datos completos del paciente;
+    stop
+else (No)
+    :Mostrar mensaje "No se encontró paciente";
+    :Ofrecer opción de registrar nuevo paciente;
+    stop
+endif
+
+@enduml
+
+@startuml DiagramaActividades_CrearOrden
+title Diagrama de Actividades - CU-009: Crear Orden
+
+start
+
+:Usuario accede a módulo de órdenes;
+:Usuario selecciona "Nueva Orden";
+:Abrir formulario de orden;
+
+:Usuario ingresa cédula del paciente;
+
+:Buscar paciente en base de datos;
+
+if (Paciente encontrado?) then (Sí)
+    :Cargar datos del paciente automáticamente;
+    note right
+      Se llenan automáticamente:
+      - Nombre
+      - Apellido
+      - Dirección
+      - Teléfono
+      - Correo
+      - Sexo
+    end note
+else (No)
+    :Mostrar opción "Registrar Paciente";
+    if (Usuario registra paciente?) then (Sí)
+        :Abrir ventana de registro;
+        :Guardar paciente;
+        :Cargar datos en formulario de orden;
+    else (No)
+        :Permitir ingresar datos manualmente;
+    endif
+endif
+
+:Usuario selecciona exámenes a realizar;
+:Calcular total de la orden;
+:Usuario completa datos adicionales;
+note right
+  - Número factura
+  - Número control
+  - Número lote
+end note
+
+:Validar datos de la orden;
+
+if (Datos válidos?) then (Sí)
+    :Guardar orden en base de datos;
+    :Guardar relación orden-exámenes;
+    :Mostrar mensaje de confirmación;
+    stop
+else (No)
+    :Mostrar mensaje de error;
+    :Permitir corregir datos;
+    stop
+endif
+
+@enduml
+
+@startuml DiagramaActividades_RegistrarPacienteDesdeOrden
+title Diagrama de Actividades - CU-013: Registrar Paciente desde Orden
+
+start
+
+:Usuario está en formulario de orden;
+:Usuario hace clic en "Registrar Paciente";
+:Abrir ventana de registro de paciente;
+
+:Usuario completa datos del paciente;
+note right
+  - Cédula
+  - Nombres
+  - Apellidos
+  - Edad
+  - Dirección
+  - Teléfono
+  - Correo
+  - Sexo
+end note
+
+:Validar datos;
+
+if (Datos válidos?) then (Sí)
+    :Guardar paciente en base de datos;
+    :Cerrar ventana de registro;
+    :Actualizar campos en ventana de orden;
+    note right
+      Los campos se actualizan
+      automáticamente sin necesidad
+      de buscar el paciente
+    end note
+    :Mostrar mensaje de confirmación;
+    stop
+else (No)
+    :Mostrar mensaje de error;
+    :Permitir corregir datos;
+    stop
+endif
+
+@enduml
+
+@startuml DiagramaActividades_IngresarResultados
+title Diagrama de Actividades - CU-017: Ingresar Resultados
+
+start
+
+:Bioanalista accede a módulo de resultados;
+:Mostrar lista de órdenes activas;
+:Bioanalista selecciona orden;
+
+:Cargar datos de la orden;
+note right
+  - Datos del paciente
+  - Lista de exámenes
+  - Información de la orden
+end note
+
+:Mostrar formulario de resultados;
+
+:Bioanalista ingresa valores de exámenes;
+note right
+  Para cada examen:
+  - Valor obtenido
+  - Unidad de medida
+  - Valores de referencia
+end note
+
+:Validar valores ingresados;
+
+if (Valores válidos?) then (Sí)
+    :Guardar resultados en base de datos;
+    :Actualizar estado de la orden;
+    :Mostrar mensaje de confirmación;
+    stop
+else (No)
+    :Mostrar mensaje de error;
+    :Permitir corregir valores;
+    stop
+endif
+
+@enduml
+
+@startuml DiagramaActividades_FinalizarResultados
+title Diagrama de Actividades - CU-018: Finalizar Resultados
+
+start
+
+:Bioanalista ha ingresado resultados;
+:Verificar que todos los exámenes tengan resultados;
+
+if (Todos los resultados completos?) then (Sí)
+    :Bioanalista selecciona "Finalizar";
+    :Validar completitud de resultados;
+    :Marcar orden como finalizada;
+    :Actualizar estado en base de datos;
+    :Mostrar mensaje de confirmación;
+    stop
+else (No)
+    :Mostrar mensaje de advertencia;
+    :Indicar exámenes faltantes;
+    :Permitir completar resultados;
+    stop
+endif
+
+@enduml
+
+@startuml DiagramaActividades_ModificarOrden
+title Diagrama de Actividades - CU-011: Modificar Orden
+
+start
+
+:Usuario accede a módulo de órdenes;
+:Usuario busca orden;
+:Usuario selecciona orden a modificar;
+
+:Verificar estado de la orden;
+
+if (Orden finalizada?) then (Sí)
+    :Mostrar mensaje de error;
+    note right
+      No se puede modificar
+      una orden finalizada
+    end note
+    stop
+else (No)
+    :Cargar datos de la orden;
+    :Mostrar formulario con datos actuales;
+    :Usuario modifica datos necesarios;
+    :Validar cambios;
+    if (Cambios válidos?) then (Sí)
+        :Actualizar orden en base de datos;
+        :Mostrar mensaje de confirmación;
+        stop
+    else (No)
+        :Mostrar mensaje de error;
+        :Permitir corregir datos;
+        stop
+    endif
+endif
+
+@enduml
+
+@startuml DiagramaActividades_AnularOrden
+title Diagrama de Actividades - CU-012: Anular Orden
+
+start
+
+:Administrador accede a módulo de órdenes;
+:Administrador busca orden;
+:Administrador selecciona orden a anular;
+
+:Verificar permisos del administrador;
+
+if (Tiene permiso de anulación?) then (Sí)
+    :Solicitar confirmación;
+    if (Administrador confirma?) then (Sí)
+        :Marcar orden como anulada;
+        :Actualizar estado en base de datos;
+        :Mostrar mensaje de confirmación;
+        stop
+    else (No)
+        :Cancelar operación;
+        stop
+    endif
+else (No)
+    :Mostrar mensaje de error de permisos;
+    stop
+endif
+
+@enduml
+
+@startuml DiagramaActividades_FlujoCompleto
+title Diagrama de Actividades - Flujo Completo: Crear Orden y Procesar Resultados
+
+start
+
+:Iniciar sesión en la aplicación;
+:Acceder a módulo de órdenes;
+:Crear nueva orden;
+
+:Ingresar o buscar paciente;
+if (Paciente existe?) then (No)
+    :Registrar nuevo paciente;
+endif
+
+:Seleccionar exámenes;
+:Guardar orden;
+
+:Acceder a módulo de resultados;
+:Seleccionar orden;
+:Ingresar resultados de exámenes;
+:Validar resultados;
+
+if (Resultados completos?) then (Sí)
+    :Finalizar resultados;
+    :Marcar orden como finalizada;
+    stop
+else (No)
+    :Completar resultados faltantes;
+    :Finalizar resultados;
+    :Marcar orden como finalizada;
+    stop
+endif
+
+@enduml
+
