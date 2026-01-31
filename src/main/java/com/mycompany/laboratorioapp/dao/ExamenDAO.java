@@ -1,6 +1,6 @@
 package com.mycompany.laboratorioapp.dao;
 
-import com.mycompany.laboratorioapp.ConexionMySQL;
+import com.mycompany.laboratorioapp.ConexionPostgreSQL;
 import com.mycompany.laboratorioapp.examenes.Examen;
 
 import java.sql.*;
@@ -8,7 +8,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Data Access Object para gestionar operaciones CRUD de Exámenes en MySQL
+ * Data Access Object para gestionar operaciones CRUD de Exámenes en PostgreSQL
  */
 public class ExamenDAO {
     
@@ -18,7 +18,7 @@ public class ExamenDAO {
     public static boolean insertar(Examen examen) {
         String sql = "INSERT INTO examenes (codigo, nombre, precio) VALUES (?, ?, ?)";
         
-        try (Connection conn = ConexionMySQL.obtenerConexion();
+        try (Connection conn = ConexionPostgreSQL.obtenerConexion();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
             
             pstmt.setString(1, examen.getCodigo());
@@ -40,7 +40,7 @@ public class ExamenDAO {
     public static boolean actualizar(Examen examen) {
         String sql = "UPDATE examenes SET nombre = ?, precio = ? WHERE codigo = ?";
         
-        try (Connection conn = ConexionMySQL.obtenerConexion();
+        try (Connection conn = ConexionPostgreSQL.obtenerConexion();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
             
             pstmt.setString(1, examen.getNombre());
@@ -62,7 +62,7 @@ public class ExamenDAO {
     public static boolean eliminar(String codigo) {
         String sql = "DELETE FROM examenes WHERE codigo = ?";
         
-        try (Connection conn = ConexionMySQL.obtenerConexion();
+        try (Connection conn = ConexionPostgreSQL.obtenerConexion();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
             
             pstmt.setString(1, codigo);
@@ -81,7 +81,7 @@ public class ExamenDAO {
     public static Examen buscarPorCodigo(String codigo) {
         String sql = "SELECT * FROM examenes WHERE codigo = ? AND activo = TRUE";
         
-        try (Connection conn = ConexionMySQL.obtenerConexion();
+        try (Connection conn = ConexionPostgreSQL.obtenerConexion();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
             
             pstmt.setString(1, codigo);
@@ -105,7 +105,7 @@ public class ExamenDAO {
         List<Examen> examenes = new ArrayList<>();
         String sql = "SELECT * FROM examenes WHERE activo = TRUE ORDER BY nombre";
         
-        try (Connection conn = ConexionMySQL.obtenerConexion();
+        try (Connection conn = ConexionPostgreSQL.obtenerConexion();
              Statement stmt = conn.createStatement();
              ResultSet rs = stmt.executeQuery(sql)) {
             
@@ -127,7 +127,7 @@ public class ExamenDAO {
         List<Examen> examenes = new ArrayList<>();
         String sql = "SELECT * FROM examenes WHERE nombre LIKE ? AND activo = TRUE ORDER BY nombre";
         
-        try (Connection conn = ConexionMySQL.obtenerConexion();
+        try (Connection conn = ConexionPostgreSQL.obtenerConexion();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
             
             pstmt.setString(1, "%" + busqueda + "%");
@@ -150,7 +150,7 @@ public class ExamenDAO {
     public static Double obtenerPrecio(String codigo) {
         String sql = "SELECT precio FROM examenes WHERE codigo = ? AND activo = TRUE";
         
-        try (Connection conn = ConexionMySQL.obtenerConexion();
+        try (Connection conn = ConexionPostgreSQL.obtenerConexion();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
             
             pstmt.setString(1, codigo);
@@ -173,7 +173,7 @@ public class ExamenDAO {
     public static String obtenerNombrePorCodigo(String codigo) {
         String sql = "SELECT nombre FROM examenes WHERE codigo = ? AND activo = TRUE";
         
-        try (Connection conn = ConexionMySQL.obtenerConexion();
+        try (Connection conn = ConexionPostgreSQL.obtenerConexion();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
             
             pstmt.setString(1, codigo);

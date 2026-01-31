@@ -1,6 +1,6 @@
 package com.mycompany.laboratorioapp.dao;
 
-import com.mycompany.laboratorioapp.ConexionMySQL;
+import com.mycompany.laboratorioapp.ConexionPostgreSQL;
 import com.mycompany.laboratorioapp.usuarios.Usuario;
 
 import java.sql.*;
@@ -8,7 +8,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Data Access Object para gestionar operaciones CRUD de Usuarios en MySQL
+ * Data Access Object para gestionar operaciones CRUD de Usuarios en PostgreSQL
  */
 public class UsuarioDAO {
     
@@ -23,7 +23,7 @@ public class UsuarioDAO {
                      "puede_modificar_ordenes, permisos_administrativos) " +
                      "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
         
-        try (Connection conn = ConexionMySQL.obtenerConexion();
+        try (Connection conn = ConexionPostgreSQL.obtenerConexion();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
             
             pstmt.setString(1, usuario.getCedula());
@@ -77,7 +77,7 @@ public class UsuarioDAO {
                      "puede_modificar_ordenes = ?, permisos_administrativos = ? " +
                      "WHERE usuario = ?";
         
-        try (Connection conn = ConexionMySQL.obtenerConexion();
+        try (Connection conn = ConexionPostgreSQL.obtenerConexion();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
             
             pstmt.setString(1, usuario.getNombres());
@@ -113,7 +113,7 @@ public class UsuarioDAO {
     public static boolean eliminar(String usuario) {
         String sql = "DELETE FROM usuarios WHERE usuario = ?";
         
-        try (Connection conn = ConexionMySQL.obtenerConexion();
+        try (Connection conn = ConexionPostgreSQL.obtenerConexion();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
             
             pstmt.setString(1, usuario);
@@ -132,7 +132,7 @@ public class UsuarioDAO {
     public static Usuario buscarPorCredenciales(String usuario, String password) {
         String sql = "SELECT * FROM usuarios WHERE usuario = ? AND password = ?";
         
-        try (Connection conn = ConexionMySQL.obtenerConexion();
+        try (Connection conn = ConexionPostgreSQL.obtenerConexion();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
             
             pstmt.setString(1, usuario);
@@ -156,7 +156,7 @@ public class UsuarioDAO {
     public static Usuario buscarPorUsuario(String usuario) {
         String sql = "SELECT * FROM usuarios WHERE usuario = ?";
         
-        try (Connection conn = ConexionMySQL.obtenerConexion();
+        try (Connection conn = ConexionPostgreSQL.obtenerConexion();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
             
             pstmt.setString(1, usuario);
@@ -180,7 +180,7 @@ public class UsuarioDAO {
         List<Usuario> usuarios = new ArrayList<>();
         String sql = "SELECT * FROM usuarios ORDER BY nombres, apellidos";
         
-        try (Connection conn = ConexionMySQL.obtenerConexion();
+        try (Connection conn = ConexionPostgreSQL.obtenerConexion();
              Statement stmt = conn.createStatement();
              ResultSet rs = stmt.executeQuery(sql)) {
             
@@ -202,7 +202,7 @@ public class UsuarioDAO {
     public static int obtenerIdPorUsuario(String usuario) {
         String sql = "SELECT id FROM usuarios WHERE usuario = ?";
         
-        try (Connection conn = ConexionMySQL.obtenerConexion();
+        try (Connection conn = ConexionPostgreSQL.obtenerConexion();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
             
             pstmt.setString(1, usuario);

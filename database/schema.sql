@@ -1,14 +1,27 @@
--- Script SQL para crear la base de datos y tablas del Laboratorio
--- Ejecuta este script en phpMyAdmin o desde la línea de comandos de MySQL
+-- Script SQL para Laboratorio - PostgreSQL 12 a 18 (pgAdmin)
+-- En pgAdmin: crea la base de datos "laboratorio_db" y ejecuta este script en ella.
+-- Compatible con PostgreSQL 12, 13, 14, 15, 16, 17 y 18.
 
--- Crear la base de datos (si no existe)
-CREATE DATABASE IF NOT EXISTS laboratorio_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+-- Suprimir NOTICEs (ej. "table does not exist, skipping") en primera ejecución
+SET client_min_messages TO WARNING;
 
-USE laboratorio_db;
+DROP TABLE IF EXISTS orden_examenes CASCADE;
+DROP TABLE IF EXISTS ordenes CASCADE;
+DROP TABLE IF EXISTS examenes CASCADE;
+DROP TABLE IF EXISTS pacientes CASCADE;
+DROP TABLE IF EXISTS usuarios CASCADE;
+
+CREATE OR REPLACE FUNCTION update_updated_at_column()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.fecha_actualizacion = CURRENT_TIMESTAMP;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
 
 -- Tabla de Usuarios
-CREATE TABLE IF NOT EXISTS usuarios (
-    id INT AUTO_INCREMENT PRIMARY KEY,
+CREATE TABLE usuarios (
+    id SERIAL PRIMARY KEY,
     cedula VARCHAR(20) UNIQUE NOT NULL,
     nombres VARCHAR(100) NOT NULL,
     apellidos VARCHAR(100) NOT NULL,
@@ -28,93 +41,111 @@ CREATE TABLE IF NOT EXISTS usuarios (
     puede_modificar_ordenes BOOLEAN DEFAULT FALSE,
     permisos_administrativos BOOLEAN DEFAULT FALSE,
     fecha_creacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    fecha_actualizacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    fecha_actualizacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TRIGGER update_usuarios_updated_at
+    BEFORE UPDATE ON usuarios
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- Tabla de Pacientes
-CREATE TABLE IF NOT EXISTS pacientes (
-    id INT AUTO_INCREMENT PRIMARY KEY,
+CREATE TABLE pacientes (
+    id SERIAL PRIMARY KEY,
     cedula VARCHAR(20) UNIQUE NOT NULL,
     nombre VARCHAR(100) NOT NULL,
     apellido VARCHAR(100) NOT NULL,
-    edad INT NOT NULL,
+    edad INTEGER NOT NULL,
     direccion VARCHAR(255),
     telefono VARCHAR(20),
     correo VARCHAR(100),
-    sexo VARCHAR(1) DEFAULT '',  -- M o F
-    usuario_id INT NULL,  -- Relación opcional: si el paciente tiene cuenta de usuario
+    sexo VARCHAR(1) DEFAULT '',
+    usuario_id INTEGER NULL,
     fecha_registro TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    fecha_actualizacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    INDEX idx_cedula (cedula),
-    INDEX idx_usuario_id (usuario_id),
-    FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE SET NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    fecha_actualizacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_pacientes_usuario FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE SET NULL
+);
+
+CREATE TRIGGER update_pacientes_updated_at
+    BEFORE UPDATE ON pacientes
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE INDEX idx_pacientes_cedula ON pacientes(cedula);
+CREATE INDEX idx_pacientes_usuario_id ON pacientes(usuario_id);
 
 -- Tabla de Exámenes
-CREATE TABLE IF NOT EXISTS examenes (
-    id INT AUTO_INCREMENT PRIMARY KEY,
+CREATE TABLE examenes (
+    id SERIAL PRIMARY KEY,
     codigo VARCHAR(50) UNIQUE NOT NULL,
     nombre VARCHAR(200) NOT NULL,
-    precio DECIMAL(10, 2) NOT NULL,
+    precio NUMERIC(10, 2) NOT NULL,
     descripcion TEXT,
     activo BOOLEAN DEFAULT TRUE,
     fecha_creacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    fecha_actualizacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    INDEX idx_codigo (codigo)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    fecha_actualizacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TRIGGER update_examenes_updated_at
+    BEFORE UPDATE ON examenes
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE INDEX idx_examenes_codigo ON examenes(codigo);
 
 -- Tabla de Órdenes
-CREATE TABLE IF NOT EXISTS ordenes (
-    id INT AUTO_INCREMENT PRIMARY KEY,
+CREATE TABLE ordenes (
+    id SERIAL PRIMARY KEY,
     numero_orden VARCHAR(50) UNIQUE NOT NULL,
     numero_factura VARCHAR(50),
     numero_control VARCHAR(50),
     numero_lote VARCHAR(50),
     fecha_registro DATE NOT NULL,
     hora_registro TIME NOT NULL,
-    paciente_id INT NOT NULL,  -- Foreign Key a pacientes
-    usuario_id INT NOT NULL,    -- Foreign Key a usuarios (quien creó la orden)
-    codigo_paciente VARCHAR(50),  -- Código interno opcional
-    cedula VARCHAR(20) NOT NULL,   -- Se mantiene para búsquedas rápidas
-    nombres VARCHAR(100) NOT NULL, -- Se mantiene para historial
+    paciente_id INTEGER NOT NULL,
+    usuario_id INTEGER NOT NULL,
+    codigo_paciente VARCHAR(50),
+    cedula VARCHAR(20) NOT NULL,
+    nombres VARCHAR(100) NOT NULL,
     apellidos VARCHAR(100) NOT NULL,
     direccion VARCHAR(255),
     telefono VARCHAR(20),
     correo VARCHAR(100),
     codigo_empresa VARCHAR(50),
     empresa VARCHAR(200),
-    sexo VARCHAR(1) DEFAULT '',  -- M o F
-    total DECIMAL(10, 2) NOT NULL,
+    sexo VARCHAR(1) DEFAULT '',
+    total NUMERIC(10, 2) NOT NULL,
     estatus VARCHAR(20) DEFAULT 'Activo',
     fecha_creacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    fecha_actualizacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    INDEX idx_numero_orden (numero_orden),
-    INDEX idx_paciente_id (paciente_id),
-    INDEX idx_usuario_id (usuario_id),
-    INDEX idx_cedula (cedula),
-    INDEX idx_fecha_registro (fecha_registro),
-    FOREIGN KEY (paciente_id) REFERENCES pacientes(id) ON DELETE RESTRICT,
-    FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    fecha_actualizacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_ordenes_paciente FOREIGN KEY (paciente_id) REFERENCES pacientes(id) ON DELETE RESTRICT,
+    CONSTRAINT fk_ordenes_usuario FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE RESTRICT
+);
 
--- Tabla de Exámenes por Orden (relación muchos a muchos)
-CREATE TABLE IF NOT EXISTS orden_examenes (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    orden_id INT NOT NULL,
+CREATE TRIGGER update_ordenes_updated_at
+    BEFORE UPDATE ON ordenes
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE INDEX idx_ordenes_numero_orden ON ordenes(numero_orden);
+CREATE INDEX idx_ordenes_paciente_id ON ordenes(paciente_id);
+CREATE INDEX idx_ordenes_usuario_id ON ordenes(usuario_id);
+CREATE INDEX idx_ordenes_cedula ON ordenes(cedula);
+CREATE INDEX idx_ordenes_fecha_registro ON ordenes(fecha_registro);
+
+-- Tabla de Exámenes por Orden
+CREATE TABLE orden_examenes (
+    id SERIAL PRIMARY KEY,
+    orden_id INTEGER NOT NULL,
     examen_codigo VARCHAR(50) NOT NULL,
-    precio DECIMAL(10, 2) NOT NULL,
-    FOREIGN KEY (orden_id) REFERENCES ordenes(id) ON DELETE CASCADE,
-    FOREIGN KEY (examen_codigo) REFERENCES examenes(codigo),
-    INDEX idx_orden_id (orden_id),
-    INDEX idx_examen_codigo (examen_codigo)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    precio NUMERIC(10, 2) NOT NULL,
+    CONSTRAINT fk_orden_examenes_orden FOREIGN KEY (orden_id) REFERENCES ordenes(id) ON DELETE CASCADE,
+    CONSTRAINT fk_orden_examenes_examen FOREIGN KEY (examen_codigo) REFERENCES examenes(codigo) ON DELETE RESTRICT
+);
 
--- Insertar algunos datos de ejemplo (opcional)
+CREATE INDEX idx_orden_examenes_orden_id ON orden_examenes(orden_id);
+CREATE INDEX idx_orden_examenes_examen_codigo ON orden_examenes(examen_codigo);
+
 -- Usuario administrador por defecto
-INSERT INTO usuarios (cedula, nombres, apellidos, usuario, password, rol, 
+INSERT INTO usuarios (cedula, nombres, apellidos, usuario, password, rol,
     modulo_ventas_laboratorio, modulo_compras, modulo_administrativos,
-    puede_control_precios, permisos_administrativos) 
+    puede_control_precios, permisos_administrativos)
 VALUES ('00000000', 'Administrador', 'Sistema', 'admin', 'admin123', 'Administrador',
     TRUE, TRUE, TRUE, TRUE, TRUE)
-ON DUPLICATE KEY UPDATE usuario = usuario;
-
+ON CONFLICT (usuario) DO UPDATE SET usuario = EXCLUDED.usuario;

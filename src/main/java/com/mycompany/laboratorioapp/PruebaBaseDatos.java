@@ -20,14 +20,14 @@ public class PruebaBaseDatos {
         System.out.println("==========================================\n");
         
         // 1. Probar conexión
-        System.out.println("1. Probando conexión a MySQL...");
-        if (!ConexionMySQL.probarConexion()) {
-            System.err.println("❌ ERROR: No se pudo conectar a MySQL");
+        System.out.println("1. Probando conexión a PostgreSQL...");
+        if (!ConexionPostgreSQL.probarConexion()) {
+            System.err.println("❌ ERROR: No se pudo conectar a PostgreSQL");
             System.err.println("   Verifica:");
-            System.err.println("   - Que MySQL esté corriendo");
+            System.err.println("   - Que PostgreSQL esté corriendo");
             System.err.println("   - Que la base de datos 'laboratorio_db' exista");
-            System.err.println("   - Que el usuario y contraseña en ConexionMySQL.java sean correctos");
-            System.err.println("   - Ejecuta el script: database/schema.sql");
+            System.err.println("   - Que el usuario y contraseña en ConexionPostgreSQL.java sean correctos");
+            System.err.println("   - Ejecuta el script: database/schema.sql en pgAdmin");
             return;
         }
         System.out.println("✓ Conexión exitosa\n");

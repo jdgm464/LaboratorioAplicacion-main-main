@@ -18,6 +18,8 @@ import java.awt.Font;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.GridLayout;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.List;
@@ -373,6 +375,24 @@ public class VentanaDetallesOrdenes {
         scrollFactura.setBorder(BorderFactory.createTitledBorder("Detalle de Factura"));
         tablasPanel.add(scrollFactura);
 
+        // Doble clic en un examen de la factura: quitar de la factura y actualizar totales
+        tablaFactura.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                if (e.getClickCount() == 2) {
+                    int fila = tablaFactura.getSelectedRow();
+                    if (fila >= 0 && modeloFactura.getRowCount() > 0) {
+                        modeloFactura.removeRow(fila);
+                        actualizarTotales();
+                    }
+                }
+            }
+        });
+        tablaFactura.setToolTipText("Doble clic en un examen para quitarlo de la factura.");
+
+        // Actualizar totales cuando se edita el costo en la tabla
+        modeloFactura.addTableModelListener(ev -> actualizarTotales());
+
         tablaExamenes.getSelectionModel().addListSelectionListener(e -> {
             if (!e.getValueIsAdjusting()) {
                 int fila = tablaExamenes.getSelectedRow();
@@ -429,16 +449,25 @@ public class VentanaDetallesOrdenes {
     }
 
     private void actualizarTotales() {
+        if (modeloFactura == null || subtotalField == null) return;
         double subtotalBruto = 0.0;
         for (int i = 0; i < modeloFactura.getRowCount(); i++) {
+            Object val = modeloFactura.getValueAt(i, 1);
+            if (val == null) continue;
+            String s = val.toString().trim().replace(',', '.');
+            if (s.isEmpty()) continue;
             try {
-                subtotalBruto += Double.parseDouble(modeloFactura.getValueAt(i, 1).toString());
-            } catch (Exception ignored) {}
+                subtotalBruto += Double.parseDouble(s);
+            } catch (NumberFormatException ignored) {}
         }
 
         double desc = 0.0, rec = 0.0;
-        try { desc = Double.parseDouble(descuentoField.getText()) / 100.0; } catch (Exception ignored) {}
-        try { rec  = Double.parseDouble(recargoField.getText())   / 100.0; } catch (Exception ignored) {}
+        if (descuentoField != null && descuentoField.getText() != null) {
+            try { desc = Double.parseDouble(descuentoField.getText().trim().replace(',', '.')) / 100.0; } catch (Exception ignored) {}
+        }
+        if (recargoField != null && recargoField.getText() != null) {
+            try { rec  = Double.parseDouble(recargoField.getText().trim().replace(',', '.'))   / 100.0; } catch (Exception ignored) {}
+        }
 
         // Subtotal muestra el monto con descuento aplicado
         double subtotalConDesc = subtotalBruto * (1.0 - Math.max(0.0, desc));

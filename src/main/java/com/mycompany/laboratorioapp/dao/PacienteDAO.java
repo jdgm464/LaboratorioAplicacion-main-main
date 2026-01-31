@@ -1,6 +1,6 @@
 package com.mycompany.laboratorioapp.dao;
 
-import com.mycompany.laboratorioapp.ConexionMySQL;
+import com.mycompany.laboratorioapp.ConexionPostgreSQL;
 import com.mycompany.laboratorioapp.pacientes.Paciente;
 
 import java.sql.*;
@@ -10,7 +10,7 @@ import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 
 /**
- * Data Access Object para gestionar operaciones CRUD de Pacientes en MySQL
+ * Data Access Object para gestionar operaciones CRUD de Pacientes en PostgreSQL
  */
 public class PacienteDAO {
     
@@ -21,7 +21,7 @@ public class PacienteDAO {
         String sql = "INSERT INTO pacientes (cedula, nombre, apellido, edad, fecha_nacimiento, direccion, telefono, correo, sexo) " +
                      "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
         
-        try (Connection conn = ConexionMySQL.obtenerConexion();
+        try (Connection conn = ConexionPostgreSQL.obtenerConexion();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
             
             pstmt.setString(1, paciente.getCedula());
@@ -54,7 +54,7 @@ public class PacienteDAO {
     public static boolean actualizar(Paciente paciente) {
         String sql = "UPDATE pacientes SET nombre = ?, apellido = ?, edad = ?, fecha_nacimiento = ?, direccion = ?, telefono = ?, correo = ?, sexo = ? WHERE cedula = ?";
         
-        try (Connection conn = ConexionMySQL.obtenerConexion();
+        try (Connection conn = ConexionPostgreSQL.obtenerConexion();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
             
             pstmt.setString(1, paciente.getNombre());
@@ -87,7 +87,7 @@ public class PacienteDAO {
     public static boolean eliminar(String cedula) {
         String sql = "DELETE FROM pacientes WHERE cedula = ?";
         
-        try (Connection conn = ConexionMySQL.obtenerConexion();
+        try (Connection conn = ConexionPostgreSQL.obtenerConexion();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
             
             pstmt.setString(1, cedula);
@@ -106,7 +106,7 @@ public class PacienteDAO {
     public static Paciente buscarPorCedula(String cedula) {
         String sql = "SELECT * FROM pacientes WHERE cedula = ?";
         
-        try (Connection conn = ConexionMySQL.obtenerConexion();
+        try (Connection conn = ConexionPostgreSQL.obtenerConexion();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
             
             pstmt.setString(1, cedula);
@@ -130,7 +130,7 @@ public class PacienteDAO {
         List<Paciente> pacientes = new ArrayList<>();
         String sql = "SELECT * FROM pacientes ORDER BY nombre, apellido";
         
-        try (Connection conn = ConexionMySQL.obtenerConexion();
+        try (Connection conn = ConexionPostgreSQL.obtenerConexion();
              Statement stmt = conn.createStatement();
              ResultSet rs = stmt.executeQuery(sql)) {
             
@@ -152,7 +152,7 @@ public class PacienteDAO {
         List<Paciente> pacientes = new ArrayList<>();
         String sql = "SELECT * FROM pacientes WHERE nombre LIKE ? OR apellido LIKE ? ORDER BY nombre, apellido";
         
-        try (Connection conn = ConexionMySQL.obtenerConexion();
+        try (Connection conn = ConexionPostgreSQL.obtenerConexion();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
             
             String patron = "%" + busqueda + "%";

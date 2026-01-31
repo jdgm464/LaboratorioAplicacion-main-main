@@ -1,6 +1,6 @@
 package com.mycompany.laboratorioapp.dao;
 
-import com.mycompany.laboratorioapp.ConexionMySQL;
+import com.mycompany.laboratorioapp.ConexionPostgreSQL;
 import com.mycompany.laboratorioapp.ordenes.Orden;
 
 import java.sql.*;
@@ -39,8 +39,8 @@ public class OrdenDAO {
         
         Connection conn = null;
         try {
-            System.out.println("🔌 Obteniendo conexión a MySQL...");
-            conn = ConexionMySQL.obtenerConexion();
+            System.out.println("🔌 Obteniendo conexión a PostgreSQL...");
+            conn = ConexionPostgreSQL.obtenerConexion();
             conn.setAutoCommit(false); // Iniciar transacción
             System.out.println("✅ Conexión establecida");
             
@@ -174,7 +174,7 @@ public class OrdenDAO {
     public static void insertarExamenesOrden(int ordenId, List<String> examenes) {
         String sql = "INSERT INTO orden_examenes (orden_id, examen_codigo, precio) VALUES (?, ?, ?)";
         
-        try (Connection conn = ConexionMySQL.obtenerConexion();
+        try (Connection conn = ConexionPostgreSQL.obtenerConexion();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
             for (String codigoExamen : examenes) {
                 Double precio = com.mycompany.laboratorioapp.dao.ExamenDAO.obtenerPrecio(codigoExamen);
@@ -217,7 +217,7 @@ public class OrdenDAO {
      */
     public static int obtenerIdPorNumeroOrden(String numeroOrden) {
         String sql = "SELECT id FROM ordenes WHERE numero_orden = ?";
-        try (Connection conn = ConexionMySQL.obtenerConexion();
+        try (Connection conn = ConexionPostgreSQL.obtenerConexion();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
             pstmt.setString(1, numeroOrden);
             ResultSet rs = pstmt.executeQuery();
@@ -250,7 +250,7 @@ public class OrdenDAO {
      */
     public static void eliminarExamenesOrden(int ordenId) {
         String sql = "DELETE FROM orden_examenes WHERE orden_id = ?";
-        try (Connection conn = ConexionMySQL.obtenerConexion();
+        try (Connection conn = ConexionPostgreSQL.obtenerConexion();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
             pstmt.setInt(1, ordenId);
             pstmt.executeUpdate();
@@ -351,7 +351,7 @@ public class OrdenDAO {
                      "WHERE numero_orden = ?";
         }
         
-        try (Connection conn = ConexionMySQL.obtenerConexion();
+        try (Connection conn = ConexionPostgreSQL.obtenerConexion();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
             
             pstmt.setString(1, orden.getNumeroFactura());
@@ -427,7 +427,7 @@ public class OrdenDAO {
     public static boolean eliminar(String numeroOrden) {
         String sql = "DELETE FROM ordenes WHERE numero_orden = ?";
         
-        try (Connection conn = ConexionMySQL.obtenerConexion();
+        try (Connection conn = ConexionPostgreSQL.obtenerConexion();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
             
             pstmt.setString(1, numeroOrden);
@@ -446,7 +446,7 @@ public class OrdenDAO {
     public static Orden buscarPorNumero(String numeroOrden) {
         String sql = "SELECT * FROM ordenes WHERE numero_orden = ?";
         
-        try (Connection conn = ConexionMySQL.obtenerConexion();
+        try (Connection conn = ConexionPostgreSQL.obtenerConexion();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
             
             pstmt.setString(1, numeroOrden);
@@ -490,7 +490,7 @@ public class OrdenDAO {
         List<Orden> ordenes = new ArrayList<>();
         String sql = "SELECT * FROM ordenes ORDER BY fecha_registro DESC, hora_registro DESC";
         
-        try (Connection conn = ConexionMySQL.obtenerConexion();
+        try (Connection conn = ConexionPostgreSQL.obtenerConexion();
              Statement stmt = conn.createStatement();
              ResultSet rs = stmt.executeQuery(sql)) {
             
@@ -514,7 +514,7 @@ public class OrdenDAO {
         List<Orden> ordenes = new ArrayList<>();
         String sql = "SELECT * FROM ordenes WHERE cedula = ? ORDER BY fecha_registro DESC";
         
-        try (Connection conn = ConexionMySQL.obtenerConexion();
+        try (Connection conn = ConexionPostgreSQL.obtenerConexion();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
             
             pstmt.setString(1, cedula);
@@ -545,7 +545,7 @@ public class OrdenDAO {
                      "INNER JOIN usuarios u ON o.usuario_id = u.id " +
                      "ORDER BY o.fecha_registro DESC, o.hora_registro DESC";
         
-        try (Connection conn = ConexionMySQL.obtenerConexion();
+        try (Connection conn = ConexionPostgreSQL.obtenerConexion();
              Statement stmt = conn.createStatement();
              ResultSet rs = stmt.executeQuery(sql)) {
             
@@ -569,7 +569,7 @@ public class OrdenDAO {
         List<Orden> ordenes = new ArrayList<>();
         String sql = "SELECT * FROM ordenes WHERE paciente_id = ? ORDER BY fecha_registro DESC";
         
-        try (Connection conn = ConexionMySQL.obtenerConexion();
+        try (Connection conn = ConexionPostgreSQL.obtenerConexion();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
             
             pstmt.setInt(1, pacienteId);
@@ -595,7 +595,7 @@ public class OrdenDAO {
         List<Orden> ordenes = new ArrayList<>();
         String sql = "SELECT * FROM ordenes WHERE usuario_id = ? ORDER BY fecha_registro DESC";
         
-        try (Connection conn = ConexionMySQL.obtenerConexion();
+        try (Connection conn = ConexionPostgreSQL.obtenerConexion();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
             
             pstmt.setInt(1, usuarioId);
@@ -622,7 +622,7 @@ public class OrdenDAO {
         // Intentar obtener el máximo número de orden numérico
         String sql = "SELECT numero_orden FROM ordenes WHERE numero_orden REGEXP '^[0-9]+$' ORDER BY CAST(numero_orden AS UNSIGNED) DESC LIMIT 1";
         
-        try (Connection conn = ConexionMySQL.obtenerConexion();
+        try (Connection conn = ConexionPostgreSQL.obtenerConexion();
              Statement stmt = conn.createStatement();
              ResultSet rs = stmt.executeQuery(sql)) {
             
@@ -714,7 +714,7 @@ public class OrdenDAO {
      * Verifica si la columna sexo existe en la tabla ordenes
      */
     private static boolean verificarColumnaSexo() {
-        try (Connection conn = ConexionMySQL.obtenerConexion()) {
+        try (Connection conn = ConexionPostgreSQL.obtenerConexion()) {
             DatabaseMetaData metaData = conn.getMetaData();
             ResultSet columns = metaData.getColumns(null, null, "ordenes", "sexo");
             boolean existe = columns.next();
