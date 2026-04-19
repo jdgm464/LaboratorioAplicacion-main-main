@@ -68,11 +68,18 @@ public class GestorPacientes {
                 paciente.getNombre(),
                 paciente.getApellido(),
                 paciente.getEdad(),
+                paciente.getFechaNacimiento(),
                 paciente.getDireccion(),
                 paciente.getTelefono(),
                 paciente.getCorreo(),
                 paciente.getSexo()
             );
+            pacienteNormalizado.setCodigo(paciente.getCodigo());
+            pacienteNormalizado.setSede(paciente.getSede());
+            pacienteNormalizado.setCategoria(paciente.getCategoria());
+            pacienteNormalizado.setDedicacion(paciente.getDedicacion());
+            pacienteNormalizado.setEstatus(paciente.getEstatus());
+            pacienteNormalizado.setFechaIngreso(paciente.getFechaIngreso());
             
             // Verificar si el paciente ya existe
             Paciente existente = PacienteDAO.buscarPorCedula(cedulaNormalizada);
@@ -98,11 +105,18 @@ public class GestorPacientes {
                 paciente.getNombre(),
                 paciente.getApellido(),
                 paciente.getEdad(),
+                paciente.getFechaNacimiento(),
                 paciente.getDireccion(),
                 paciente.getTelefono(),
                 paciente.getCorreo(),
                 paciente.getSexo()
             );
+            pacienteNormalizado.setCodigo(paciente.getCodigo());
+            pacienteNormalizado.setSede(paciente.getSede());
+            pacienteNormalizado.setCategoria(paciente.getCategoria());
+            pacienteNormalizado.setDedicacion(paciente.getDedicacion());
+            pacienteNormalizado.setEstatus(paciente.getEstatus());
+            pacienteNormalizado.setFechaIngreso(paciente.getFechaIngreso());
             
             PacienteDAO.actualizar(pacienteNormalizado);
         } catch (Exception e) {

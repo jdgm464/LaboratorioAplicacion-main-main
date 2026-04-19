@@ -191,6 +191,40 @@ public class ExamenDAO {
     }
     
     /**
+     * Actualiza solo el precio de múltiples exámenes en una única transacción y conexión (batch).
+     * Mucho más rápido que actualizar uno por uno porque elimina los SELECTs previos
+     * y agrupa todos los UPDATEs en un solo viaje a la base de datos.
+     */
+    public static int actualizarPreciosEnLote(java.util.Map<String, Double> precios) {
+        if (precios == null || precios.isEmpty()) return 0;
+        String sql = "UPDATE examenes SET precio = ? WHERE codigo = ?";
+        int actualizados = 0;
+        try (Connection conn = ConexionPostgreSQL.obtenerConexion()) {
+            conn.setAutoCommit(false);
+            try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
+                for (java.util.Map.Entry<String, Double> entry : precios.entrySet()) {
+                    pstmt.setDouble(1, entry.getValue());
+                    pstmt.setString(2, entry.getKey());
+                    pstmt.addBatch();
+                }
+                int[] resultados = pstmt.executeBatch();
+                conn.commit();
+                for (int r : resultados) {
+                    if (r > 0) actualizados++;
+                }
+            } catch (SQLException e) {
+                conn.rollback();
+                System.err.println("Error en batch update de precios: " + e.getMessage());
+                throw e;
+            }
+        } catch (SQLException e) {
+            System.err.println("Error al actualizar precios en lote: " + e.getMessage());
+            return 0;
+        }
+        return actualizados;
+    }
+
+    /**
      * Mapea un ResultSet a un objeto Examen
      */
     private static Examen mapearExamen(ResultSet rs) throws SQLException {

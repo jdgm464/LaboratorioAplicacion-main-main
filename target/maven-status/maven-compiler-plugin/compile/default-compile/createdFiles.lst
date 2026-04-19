@@ -3,6 +3,7 @@ com\mycompany\laboratorioapp\usuarios\SesionUsuario.class
 com\mycompany\laboratorioapp\dao\PacienteDAO.class
 com\mycompany\laboratorioapp\InterfazPrincipal$ClockIcon.class
 com\mycompany\laboratorioapp\resultados\VentanaDetallesResultados$SimpleDocListener.class
+com\mycompany\laboratorioapp\pacientes\PacienteExcelHelper$1.class
 com\mycompany\laboratorioapp\ordenes\VentanaDetallesOrdenes$SimpleDocListener.class
 com\mycompany\laboratorioapp\VentanaOBioanalista.class
 com\mycompany\laboratorioapp\usuarios\login.class

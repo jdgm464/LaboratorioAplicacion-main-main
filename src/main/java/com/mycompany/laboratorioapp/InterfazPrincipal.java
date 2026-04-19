@@ -55,6 +55,24 @@ public class InterfazPrincipal {
 
         // Barra de menús (superior)
         javax.swing.JMenuBar menuBar = new javax.swing.JMenuBar();
+
+        // Menú Archivos (al lado izquierdo de Ventas, se despliega al pasar el mouse)
+        javax.swing.JMenu menuArchivos = new javax.swing.JMenu("Archivos");
+        javax.swing.JMenuItem itemVerArchivos = new javax.swing.JMenuItem("Ver Archivos");
+        itemVerArchivos.addActionListener(e -> {
+            VentanaArchivos ventana = new VentanaArchivos();
+            ventana.mostrar();
+        });
+        menuArchivos.add(itemVerArchivos);
+        menuArchivos.addMouseListener(new java.awt.event.MouseAdapter() {
+            @Override
+            public void mouseEntered(java.awt.event.MouseEvent e) {
+                javax.swing.MenuElement[] path = {menuBar, menuArchivos};
+                javax.swing.MenuSelectionManager.defaultManager().setSelectedPath(path);
+            }
+        });
+        menuBar.add(menuArchivos);
+
         javax.swing.JMenu menuVentas = new javax.swing.JMenu("Ventas");
         javax.swing.JMenuItem itemControlPrecios = new javax.swing.JMenuItem("Control de precios");
         itemControlPrecios.addActionListener(e -> {
@@ -73,6 +91,16 @@ public class InterfazPrincipal {
         });
         menuUsuarios.add(itemRegistroUsuarios);
         menuBar.add(menuUsuarios);
+
+        // Botón Cerrar Sesión (al lado derecho de Usuarios)
+        javax.swing.JButton btnCerrarSesion = new javax.swing.JButton("Cerrar Sesión");
+        btnCerrarSesion.setFocusPainted(false);
+        btnCerrarSesion.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        btnCerrarSesion.setForeground(new Color(180, 0, 0));
+        btnCerrarSesion.setFont(new Font("Arial", Font.BOLD, 12));
+        btnCerrarSesion.addActionListener(e -> cerrarSesion());
+        menuBar.add(btnCerrarSesion);
+
         mainFrame.setJMenuBar(menuBar);
 
         agregarMenuSuperior();
@@ -84,7 +112,7 @@ public class InterfazPrincipal {
         JPanel menuPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 20, 20));
         menuPanel.setBackground(Color.WHITE);
 
-        String[] menuItems = {"Órdenes", "Resultados", "Pacientes", "Presupuesto", "Archivos"};
+        String[] menuItems = {"Órdenes", "Pacientes", "Resultados", "Reporte Diario", "Cierre Por Fecha", "Presupuestos"};
 
         for (String item : menuItems) {
             JButton button = new JButton(item);
@@ -92,7 +120,12 @@ public class InterfazPrincipal {
             button.setForeground(Color.WHITE);
             button.setFont(new Font("Arial", Font.BOLD, 16));
             button.setFocusPainted(false);
-            button.setPreferredSize(new Dimension(120, 40));
+            int anchoBoton = switch (item) {
+                case "Reporte Diario" -> 160;
+                case "Cierre Por Fecha" -> 180;
+                default -> 140;
+            };
+            button.setPreferredSize(new Dimension(anchoBoton, 40));
             button.setCursor(new Cursor(Cursor.HAND_CURSOR));
             button.setOpaque(true);
             button.setBorder(BorderFactory.createLineBorder(Color.CYAN, 1, true));
@@ -112,12 +145,20 @@ public class InterfazPrincipal {
                         VentanaPacientes ventana = new VentanaPacientes();
                         ventana.mostrar();
                     }
-                    case "Presupuesto" -> {
+                    case "Reporte Diario" -> javax.swing.JOptionPane.showMessageDialog(
+                            mainFrame,
+                            "La opción Reporte Diario aún no está disponible.",
+                            "Información",
+                            javax.swing.JOptionPane.INFORMATION_MESSAGE
+                    );
+                    case "Cierre Por Fecha" -> javax.swing.JOptionPane.showMessageDialog(
+                            mainFrame,
+                            "La opción Cierre Por Fecha aún no está disponible.",
+                            "Información",
+                            javax.swing.JOptionPane.INFORMATION_MESSAGE
+                    );
+                    case "Presupuestos" -> {
                         VentanaPresupuestos ventana = new VentanaPresupuestos();
-                        ventana.mostrar();
-                    }
-                    case "Archivos" -> {
-                        VentanaArchivos ventana = new VentanaArchivos();
                         ventana.mostrar();
                     }
                 }
@@ -125,7 +166,11 @@ public class InterfazPrincipal {
 
             // Limitar funciones si es usuario
             if (rolUsuario.equals("Usuario")
-                    && (item.equals("Resultados") || item.equals("Pacientes") || item.equals("Presupuesto") || item.equals("Archivos"))) {
+                    && (item.equals("Resultados")
+                    || item.equals("Pacientes")
+                    || item.equals("Reporte Diario")
+                    || item.equals("Cierre Por Fecha")
+                    || item.equals("Presupuestos"))) {
                 button.setEnabled(false);
             }
 
@@ -582,6 +627,29 @@ public class InterfazPrincipal {
             javax.swing.JOptionPane.showMessageDialog(mainFrame, "Tasa actualizada a " + String.format("%.2f", val));
         } catch (Exception ex) {
             javax.swing.JOptionPane.showMessageDialog(mainFrame, "Valor inválido.");
+        }
+    }
+
+    private void cerrarSesion() {
+        int opcion = javax.swing.JOptionPane.showOptionDialog(
+            mainFrame,
+            "¿Está seguro de que desea cerrar sesión?",
+            "Cerrar Sesión",
+            javax.swing.JOptionPane.YES_NO_OPTION,
+            javax.swing.JOptionPane.QUESTION_MESSAGE,
+            null,
+            new Object[]{"Sí", "No"},
+            "No"
+        );
+        if (opcion == javax.swing.JOptionPane.YES_OPTION) {
+            javax.swing.JOptionPane.showMessageDialog(
+                mainFrame,
+                "Sesión cerrada exitosamente.",
+                "Cerrando Sesión",
+                javax.swing.JOptionPane.INFORMATION_MESSAGE
+            );
+            mainFrame.dispose();
+            javax.swing.SwingUtilities.invokeLater(() -> new com.mycompany.laboratorioapp.usuarios.login());
         }
     }
 }

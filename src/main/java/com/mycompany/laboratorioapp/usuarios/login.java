@@ -106,6 +106,12 @@ public class login {
         });
         frame.add(registroButton, gbc);
 
+        // Presionar Enter en cualquier campo dispara el inicio de sesión
+        java.awt.event.ActionListener enterAction = e -> autenticar();
+        usuarioField.addActionListener(enterAction);
+        passwordField.addActionListener(enterAction);
+        frame.getRootPane().setDefaultButton(loginButton);
+
         frame.setVisible(true);
     }
 

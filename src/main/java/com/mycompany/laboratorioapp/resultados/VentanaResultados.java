@@ -3,6 +3,7 @@ package com.mycompany.laboratorioapp.resultados;
 import com.mycompany.laboratorioapp.examenes.VentanaDetallesExamen;
 import com.mycompany.laboratorioapp.ordenes.Orden;
 import com.mycompany.laboratorioapp.ordenes.OrdenManager;
+import com.mycompany.laboratorioapp.pacientes.PacienteExcelHelper;
 import com.mycompany.laboratorioapp.pacientes.GestorPacientes;
 import com.mycompany.laboratorioapp.pacientes.Paciente;
 
@@ -253,25 +254,30 @@ public class VentanaResultados {
         };
         for (Orden o : ordenes) {
             Paciente p = GestorPacientes.buscarPorCedula(o.getCedula());
+            java.util.Map<String, String> datosExcel = PacienteExcelHelper.buscarPorCedula(o.getCedula());
             String sexo = "";
-            // Primero intentar obtener el sexo de la orden
-            if (o.getSexo() != null && !o.getSexo().isEmpty()) {
+            if (o.getSexo() != null && !o.getSexo().isBlank()) {
                 sexo = o.getSexo();
-            } else if (p != null && p.getSexo() != null && !p.getSexo().isEmpty()) {
-                // Si no está en la orden, obtener del paciente
+            } else if (p != null && p.getSexo() != null && !p.getSexo().isBlank()) {
                 sexo = p.getSexo();
+            } else if (datosExcel.get("sexo") != null && !datosExcel.get("sexo").isBlank()) {
+                sexo = datosExcel.get("sexo");
             }
-            // Convertir M/F a formato legible si es necesario
-            if (sexo.equals("M")) sexo = "M";
-            else if (sexo.equals("F")) sexo = "F";
             
             String edad;
             if (p != null && p.getEdad() > 0) {
                 edad = String.valueOf(p.getEdad());
+            } else if (datosExcel.get("edad") != null && !datosExcel.get("edad").isBlank()) {
+                edad = datosExcel.get("edad");
             } else {
-                // Intento de extracción desde nombre si viene como "NOMBRE APELLIDO (26)"
                 edad = extraerEdadDeNombre(o.getNombres(), o.getApellidos());
             }
+
+            String entidad = o.getEmpresa();
+            if (entidad == null || entidad.isBlank() || "-- Seleccionar --".equalsIgnoreCase(entidad)) {
+                entidad = "";
+            }
+
             model.addRow(new Object[]{
                     o.getNumeroOrden(),
                     o.getCedula(),
@@ -279,7 +285,7 @@ public class VentanaResultados {
                     o.getApellidos(),
                     sexo,
                     o.getFechaRegistro(),
-                    o.getEmpresa(),
+                    entidad,
                     edad
             });
         }

@@ -1,6 +1,5 @@
 package com.mycompany.laboratorioapp.pacientes;
 
-import com.mycompany.laboratorioapp.BaseDeDatosExcel;
 import com.mycompany.laboratorioapp.ordenes.VentanaDetallesOrdenes;
 
 import org.apache.poi.ss.usermodel.Row;
@@ -323,11 +322,11 @@ public class VentanaRegistroPacientes {
                     datos.getOrDefault("correo", ""),
                     sexo
             );
+            p.setCodigo(datos.getOrDefault("codigo", ""));
+            p.setEstatus("Activo");
+            p.setFechaIngreso(LocalDate.now());
             GestorPacientes.guardarPaciente(p);
         } catch (Exception ignored) {}
-
-        // También llamar a la API placeholder si existiera una implementación
-        try { BaseDeDatosExcel.guardarPaciente(datos); } catch (Exception ignored) {}
 
         // Actualizar contador de código solo cuando NO es familiar y se guardó
         if (!familiarCheck.isSelected()) {
@@ -354,6 +353,9 @@ public class VentanaRegistroPacientes {
                 datos.getOrDefault("correo", ""),
                 sexo
         );
+        pacienteParaCargar.setCodigo(datos.getOrDefault("codigo", ""));
+        pacienteParaCargar.setEstatus("Activo");
+        pacienteParaCargar.setFechaIngreso(LocalDate.now());
         
         // Mostrar mensaje
         JOptionPane.showMessageDialog(frame, "Paciente registrado exitosamente.");
@@ -388,7 +390,34 @@ public class VentanaRegistroPacientes {
             if (edadCalculada < 0) edadCalculada = 0;
             datos.put("edad", String.valueOf(edadCalculada));
         }
-        BaseDeDatosExcel.actualizarPaciente(cedula, datos);
+
+        LocalDate fechaNacimiento = null;
+        String fechaNacTexto = datos.getOrDefault("fechaNac", "").trim();
+        if (!fechaNacTexto.isEmpty()) {
+            try {
+                DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+                fechaNacimiento = LocalDate.parse(fechaNacTexto, formatter);
+            } catch (Exception ignored) {}
+        }
+        String sexo = datos.getOrDefault("sexo", "");
+        if (sexo.equalsIgnoreCase("Masculino")) sexo = "M";
+        else if (sexo.equalsIgnoreCase("Femenino")) sexo = "F";
+
+        Paciente actualizado = new Paciente(
+                cedula,
+                datos.getOrDefault("nombres", ""),
+                datos.getOrDefault("apellidos", ""),
+                edadCalculada,
+                fechaNacimiento,
+                datos.getOrDefault("direccion", ""),
+                datos.getOrDefault("telefono", ""),
+                datos.getOrDefault("correo", ""),
+                sexo
+        );
+        actualizado.setCodigo(datos.getOrDefault("codigo", ""));
+        actualizado.setEstatus("Activo");
+        actualizado.setFechaIngreso(LocalDate.now());
+        GestorPacientes.actualizarPaciente(actualizado);
 
         JOptionPane.showMessageDialog(frame, "Paciente actualizado correctamente.");
         if (ventanaDetalles != null) ventanaDetalles.setCedulaPaciente(cedula);
@@ -446,6 +475,7 @@ public class VentanaRegistroPacientes {
             direccionField.setText(paciente.getDireccion());
             telefonoField.setText(paciente.getTelefono());
             edadField.setText(String.valueOf(paciente.getEdad()));
+            codigoField.setText(paciente.getCodigo() != null ? paciente.getCodigo() : "");
             
             // Cargar sexo si está disponible
             if (paciente.getSexo() != null && !paciente.getSexo().trim().isEmpty()) {

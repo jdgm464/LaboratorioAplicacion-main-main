@@ -4,6 +4,7 @@ import java.time.LocalDate;
 
 public class Paciente {
     private String cedula;
+    private String codigo;
     private String nombre;
     private String apellido;
     private int edad;
@@ -12,6 +13,11 @@ public class Paciente {
     private String telefono;
     private String correo;
     private String sexo; // M o F
+    private String sede;
+    private String categoria;
+    private String dedicacion;
+    private String estatus;
+    private LocalDate fechaIngreso;
 
     public Paciente(String cedula, String nombre, String apellido, int edad,
                     String direccion, String telefono, String correo) {
@@ -36,6 +42,12 @@ public class Paciente {
         this.telefono = telefono;
         this.correo = correo;
         this.sexo = sexo != null ? sexo : "";
+        this.codigo = "";
+        this.sede = "";
+        this.categoria = "";
+        this.dedicacion = "";
+        this.estatus = "";
+        this.fechaIngreso = null;
     }
 
     // --- Getters y Setters ---
@@ -51,8 +63,16 @@ public class Paciente {
         return nombre;
     }
 
+    public String getCodigo() {
+        return codigo;
+    }
+
     public void setNombre(String nombre) {
         this.nombre = nombre;
+    }
+
+    public void setCodigo(String codigo) {
+        this.codigo = codigo;
     }
 
     public String getApellido() {
@@ -114,6 +134,46 @@ public class Paciente {
 
     public void setSexo(String sexo) {
         this.sexo = sexo != null ? sexo : "";
+    }
+
+    public String getSede() {
+        return sede != null ? sede : "";
+    }
+
+    public void setSede(String sede) {
+        this.sede = sede;
+    }
+
+    public String getCategoria() {
+        return categoria != null ? categoria : "";
+    }
+
+    public void setCategoria(String categoria) {
+        this.categoria = categoria;
+    }
+
+    public String getDedicacion() {
+        return dedicacion != null ? dedicacion : "";
+    }
+
+    public void setDedicacion(String dedicacion) {
+        this.dedicacion = dedicacion;
+    }
+
+    public String getEstatus() {
+        return estatus != null ? estatus : "";
+    }
+
+    public void setEstatus(String estatus) {
+        this.estatus = estatus;
+    }
+
+    public LocalDate getFechaIngreso() {
+        return fechaIngreso;
+    }
+
+    public void setFechaIngreso(LocalDate fechaIngreso) {
+        this.fechaIngreso = fechaIngreso;
     }
 
     @Override

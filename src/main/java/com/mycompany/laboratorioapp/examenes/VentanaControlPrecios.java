@@ -35,6 +35,7 @@ public class VentanaControlPrecios {
 
     // Tabla inferior
     private final DefaultTableModel modeloTabla;
+    private final JTable tabla;
     private java.util.List<Examen> examenesCargados = new java.util.ArrayList<>();
 
     public VentanaControlPrecios() {
@@ -134,7 +135,7 @@ public class VentanaControlPrecios {
 
         // ====== Tabla inferior ======
         modeloTabla = new DefaultTableModel(new String[]{"Código", "Descripción", "Precio"}, 0);
-        JTable tabla = new JTable(modeloTabla);
+        tabla = new JTable(modeloTabla);
         JScrollPane scroll = new JScrollPane(tabla);
         scroll.setPreferredSize(new Dimension(900, 380));
         contenido.add(scroll);
@@ -248,27 +249,49 @@ public class VentanaControlPrecios {
     public void mostrar() { frame.setVisible(true); }
 
     private void guardarCambiosEnExcel() {
-        try {
-            int cambiosGuardados = 0;
-            for (int i = 0; i < modeloTabla.getRowCount(); i++) {
-                String codigo = String.valueOf(modeloTabla.getValueAt(i, 0));
-                String precioStr = String.valueOf(modeloTabla.getValueAt(i, 2));
-                try {
-                    double nuevoPrecio = Double.parseDouble(precioStr.replace(",", "."));
-                    // Actualizar directamente en la base de datos
-                    BaseDeDatosExcel.actualizarPrecio(codigo, nuevoPrecio);
-                    cambiosGuardados++;
-                } catch (Exception ignored) {}
-            }
-            // Ya no se guarda en Excel, solo en la BD
-            javax.swing.JOptionPane.showMessageDialog(frame, 
-                "Cambios guardados en la base de datos (" + cambiosGuardados + " precios actualizados).");
-        } catch (Exception ex) {
-            javax.swing.JOptionPane.showMessageDialog(frame, 
-                "Error al guardar: " + ex.getMessage(), 
-                "Error", 
-                javax.swing.JOptionPane.ERROR_MESSAGE);
+        // Confirmar cualquier edición de celda activa antes de leer los valores del modelo
+        if (tabla.isEditing()) {
+            tabla.getCellEditor().stopCellEditing();
         }
+
+        // Recolectar todos los precios de la tabla antes de lanzar el hilo
+        java.util.Map<String, Double> precios = new java.util.LinkedHashMap<>();
+        for (int i = 0; i < modeloTabla.getRowCount(); i++) {
+            String codigo = String.valueOf(modeloTabla.getValueAt(i, 0));
+            String precioStr = String.valueOf(modeloTabla.getValueAt(i, 2));
+            try {
+                double nuevoPrecio = Double.parseDouble(precioStr.replace(",", "."));
+                if (!codigo.isBlank()) precios.put(codigo, nuevoPrecio);
+            } catch (Exception ignored) {}
+        }
+
+        if (precios.isEmpty()) {
+            javax.swing.JOptionPane.showMessageDialog(frame, "No hay precios para guardar.");
+            return;
+        }
+
+        // Ejecutar la actualización en un hilo de fondo para no bloquear la UI
+        javax.swing.SwingWorker<Integer, Void> worker = new javax.swing.SwingWorker<>() {
+            @Override
+            protected Integer doInBackground() throws Exception {
+                return ExamenDAO.actualizarPreciosEnLote(precios);
+            }
+
+            @Override
+            protected void done() {
+                try {
+                    int actualizados = get();
+                    javax.swing.JOptionPane.showMessageDialog(frame,
+                        "Cambios guardados en la base de datos (" + actualizados + " precios actualizados).");
+                } catch (Exception ex) {
+                    javax.swing.JOptionPane.showMessageDialog(frame,
+                        "Error al guardar: " + ex.getMessage(),
+                        "Error",
+                        javax.swing.JOptionPane.ERROR_MESSAGE);
+                }
+            }
+        };
+        worker.execute();
     }
 
     private void seleccionarArchivoLista() {

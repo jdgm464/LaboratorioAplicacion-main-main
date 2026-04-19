@@ -1,6 +1,7 @@
 C:\Users\Gateway\OneDrive\Escritorio\LaboratorioAplicacion-main-main\src\main\java\com\mycompany\laboratorioapp\BaseDeDatosExcel.java
 C:\Users\Gateway\OneDrive\Escritorio\LaboratorioAplicacion-main-main\src\main\java\com\mycompany\laboratorioapp\CargarImagen.java
 C:\Users\Gateway\OneDrive\Escritorio\LaboratorioAplicacion-main-main\src\main\java\com\mycompany\laboratorioapp\ConexionMySQL.java
+C:\Users\Gateway\OneDrive\Escritorio\LaboratorioAplicacion-main-main\src\main\java\com\mycompany\laboratorioapp\ConexionPostgreSQL.java
 C:\Users\Gateway\OneDrive\Escritorio\LaboratorioAplicacion-main-main\src\main\java\com\mycompany\laboratorioapp\dao\ExamenDAO.java
 C:\Users\Gateway\OneDrive\Escritorio\LaboratorioAplicacion-main-main\src\main\java\com\mycompany\laboratorioapp\dao\OrdenDAO.java
 C:\Users\Gateway\OneDrive\Escritorio\LaboratorioAplicacion-main-main\src\main\java\com\mycompany\laboratorioapp\dao\PacienteDAO.java
@@ -19,6 +20,7 @@ C:\Users\Gateway\OneDrive\Escritorio\LaboratorioAplicacion-main-main\src\main\ja
 C:\Users\Gateway\OneDrive\Escritorio\LaboratorioAplicacion-main-main\src\main\java\com\mycompany\laboratorioapp\ordenes\VentanaOrdenes.java
 C:\Users\Gateway\OneDrive\Escritorio\LaboratorioAplicacion-main-main\src\main\java\com\mycompany\laboratorioapp\pacientes\GestorPacientes.java
 C:\Users\Gateway\OneDrive\Escritorio\LaboratorioAplicacion-main-main\src\main\java\com\mycompany\laboratorioapp\pacientes\Paciente.java
+C:\Users\Gateway\OneDrive\Escritorio\LaboratorioAplicacion-main-main\src\main\java\com\mycompany\laboratorioapp\pacientes\PacienteExcelHelper.java
 C:\Users\Gateway\OneDrive\Escritorio\LaboratorioAplicacion-main-main\src\main\java\com\mycompany\laboratorioapp\pacientes\VentanaPacientes.java
 C:\Users\Gateway\OneDrive\Escritorio\LaboratorioAplicacion-main-main\src\main\java\com\mycompany\laboratorioapp\pacientes\VentanaRegistroPacientes.java
 C:\Users\Gateway\OneDrive\Escritorio\LaboratorioAplicacion-main-main\src\main\java\com\mycompany\laboratorioapp\PruebaBaseDatos.java

@@ -1,9 +1,6 @@
 package com.mycompany.laboratorioapp.ordenes;
 
-import com.mycompany.laboratorioapp.BaseDeDatosExcel;
-import com.mycompany.laboratorioapp.examenes.Examen;
-import com.mycompany.laboratorioapp.pacientes.GestorPacientes;
-import com.mycompany.laboratorioapp.pacientes.Paciente;
+import com.mycompany.laboratorioapp.pacientes.PacienteExcelHelper;
 
 import java.awt.BorderLayout;
 import java.awt.Color;
@@ -147,7 +144,25 @@ public class VentanaOrdenes {
             // Obtener todas las órdenes desde la base de datos
             List<Orden> ordenes = OrdenManager.getOrdenes();
             for (Orden o : ordenes) {
-                Object[] row = o.toRow();
+                java.util.Map<String, String> datosExcel = PacienteExcelHelper.buscarPorCedula(o.getCedula());
+                Object[] row = new Object[] {
+                    o.getNumeroOrden(),
+                    o.getNumeroFactura(),
+                    o.getNumeroControl(),
+                    o.getNumeroLote(),
+                    o.getFechaRegistro(),
+                    o.getHoraRegistro(),
+                    valorNoVacio(o.getCodigoPaciente(), datosExcel.get("codigo")),
+                    o.getCedula(),
+                    o.getNombres(),
+                    o.getApellidos(),
+                    o.getDireccion(),
+                    o.getTelefono(),
+                    o.getCorreo(),
+                    o.getCodigoEmpresa(),
+                    limpiarEmpresa(o.getEmpresa()),
+                    o.getEstatus()
+                };
                 // Si la orden no tiene estatus, lo agregamos como "Activo"
                 if (row.length == 15) {
                     Object[] rowConEstatus = Arrays.copyOf(row, 16);
@@ -221,14 +236,18 @@ public class VentanaOrdenes {
         detalles.cargarOrden(o);
     }
 
-    private double obtenerPrecioPorNombre(String nombre) {
-        if (nombre == null) return 0.0;
-        // Buscar directamente en la BD
-        java.util.List<Examen> examenes = com.mycompany.laboratorioapp.dao.ExamenDAO.buscarPorNombre(nombre);
-        if (examenes != null && !examenes.isEmpty()) {
-            return examenes.get(0).getPrecio();
+    private String valorNoVacio(String principal, String respaldo) {
+        if (principal != null && !principal.isBlank()) {
+            return principal;
         }
-        return 0.0;
+        return respaldo != null ? respaldo : "";
+    }
+
+    private String limpiarEmpresa(String empresa) {
+        if (empresa == null || empresa.isBlank() || "-- Seleccionar --".equalsIgnoreCase(empresa)) {
+            return "";
+        }
+        return empresa;
     }
 }
 

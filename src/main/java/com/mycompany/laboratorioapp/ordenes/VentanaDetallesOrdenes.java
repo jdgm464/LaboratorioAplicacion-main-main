@@ -6,6 +6,7 @@ import com.mycompany.laboratorioapp.dao.ExamenDAO;
 import com.mycompany.laboratorioapp.examenes.Examen;
 import com.mycompany.laboratorioapp.pacientes.GestorPacientes;
 import com.mycompany.laboratorioapp.pacientes.Paciente;
+import com.mycompany.laboratorioapp.pacientes.PacienteExcelHelper;
 import com.mycompany.laboratorioapp.pacientes.VentanaPacientes;
 import com.mycompany.laboratorioapp.pacientes.VentanaRegistroPacientes;
 import com.mycompany.laboratorioapp.resultados.VentanaResultados;
@@ -18,11 +19,12 @@ import java.awt.Font;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.GridLayout;
+import java.awt.event.KeyAdapter;
+import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.text.SimpleDateFormat;
 import java.util.Date;
-import java.util.List;
 
 import javax.swing.BorderFactory;
 import javax.swing.JButton;
@@ -36,6 +38,7 @@ import javax.swing.JTable;
 import javax.swing.JTextArea;
 import javax.swing.JTextField;
 import javax.swing.table.DefaultTableModel;
+import javax.swing.table.TableRowSorter;
  
 
 
@@ -54,6 +57,9 @@ public class VentanaDetallesOrdenes {
     private JTable tablaExamenes;
     private JTable tablaFactura;
     private DefaultTableModel modeloFactura;
+    private JTextField filtroExamenField;
+    private TableRowSorter<DefaultTableModel> sorterExamenes;
+    private boolean seleccionProgramaticaExamen;
 
     // --- Campos de totales ---
     private JTextField subtotalField, descuentoField, recargoField, totalField, saldoField;
@@ -90,13 +96,17 @@ public class VentanaDetallesOrdenes {
         // Edad desde pacientes si existe
         Paciente p = GestorPacientes.buscarPorCedula(orden.getCedula());
         if (p != null) {
-            edadField.setText(String.valueOf(p.getEdad()));
+            edadField.setText(obtenerEdadPaciente(p, orden.getCedula()));
         }
         
         // Empresa/Entidad
         if (orden.getEmpresa() != null && !orden.getEmpresa().isBlank()) {
-            entidadCombo.addItem(orden.getEmpresa());
+            if (((javax.swing.DefaultComboBoxModel<String>) entidadCombo.getModel()).getIndexOf(orden.getEmpresa()) < 0) {
+                entidadCombo.addItem(orden.getEmpresa());
+            }
             entidadCombo.setSelectedItem(orden.getEmpresa());
+        } else if (entidadCombo.getItemCount() > 0) {
+            entidadCombo.setSelectedIndex(0);
         }
         
         // Cargar exámenes en la tabla de factura
@@ -237,14 +247,8 @@ public class VentanaDetallesOrdenes {
                     VentanaRegistroPacientes ventana = new VentanaRegistroPacientes((javax.swing.JFrame) null, this);
                     ventana.mostrar();
                 } else {
-                    nombreField.setText(paciente.getNombre());
-                    apellidoField.setText(paciente.getApellido());
-                    direccionField.setText(paciente.getDireccion());
-                    telefonoField.setText(paciente.getTelefono());
-                    correoField.setText(paciente.getCorreo());
-                    rifField.setText(paciente.getCedula());
-                    edadField.setText(String.valueOf(paciente.getEdad()));
-                    // El sexo se guardará automáticamente cuando se guarde la orden
+                    cargarPacienteEnCampos(paciente);
+                    verificarEdadPaciente(paciente);
                 }
             }
         });
@@ -273,6 +277,11 @@ public class VentanaDetallesOrdenes {
 
         gbc.gridx = 6;
         entidadCombo = new JComboBox<>();
+        entidadCombo.addItem("-- Seleccionar --");
+        for (String entidad : BaseDeDatosExcel.getEntidades()) {
+            entidadCombo.addItem(entidad);
+        }
+        entidadCombo.setSelectedIndex(0);
         entidadCombo.setPreferredSize(new Dimension(180, 25));
         dataPanel.add(entidadCombo, gbc);
 
@@ -355,13 +364,23 @@ public class VentanaDetallesOrdenes {
             @Override public boolean isCellEditable(int row, int column) { return false; }
         };
         tablaExamenes = new JTable(modeloExamenes);
+        sorterExamenes = new TableRowSorter<>(modeloExamenes);
+        tablaExamenes.setRowSorter(sorterExamenes);
         // Ocultar columna de código
         tablaExamenes.getColumnModel().getColumn(0).setMinWidth(0);
         tablaExamenes.getColumnModel().getColumn(0).setMaxWidth(0);
         tablaExamenes.getColumnModel().getColumn(0).setWidth(0);
         JScrollPane scrollExamenes = new JScrollPane(tablaExamenes);
-        scrollExamenes.setBorder(BorderFactory.createTitledBorder("Exámenes"));
-        tablasPanel.add(scrollExamenes);
+        JPanel panelExamenes = new JPanel(new BorderLayout(5, 5));
+        panelExamenes.setBorder(BorderFactory.createTitledBorder("Exámenes"));
+        JPanel panelBusquedaExamen = new JPanel(new BorderLayout(5, 5));
+        panelBusquedaExamen.add(new JLabel("Buscar:"), BorderLayout.WEST);
+        filtroExamenField = new JTextField();
+        filtroExamenField.setToolTipText("Escriba el nombre o código del examen para ubicarlo rápido.");
+        panelBusquedaExamen.add(filtroExamenField, BorderLayout.CENTER);
+        panelExamenes.add(panelBusquedaExamen, BorderLayout.NORTH);
+        panelExamenes.add(scrollExamenes, BorderLayout.CENTER);
+        tablasPanel.add(panelExamenes);
 
         // Derecha: Factura
         String[] columnasFactura = {"Examen", "Costo ($)"};
@@ -393,16 +412,35 @@ public class VentanaDetallesOrdenes {
         // Actualizar totales cuando se edita el costo en la tabla
         modeloFactura.addTableModelListener(ev -> actualizarTotales());
 
-        tablaExamenes.getSelectionModel().addListSelectionListener(e -> {
-            if (!e.getValueIsAdjusting()) {
-                int fila = tablaExamenes.getSelectedRow();
-                if (fila >= 0) {
-                    String codigo = String.valueOf(tablaExamenes.getValueAt(fila, 0));
-                    String descripcion = String.valueOf(tablaExamenes.getValueAt(fila, 1));
-                    Double p = ExamenDAO.obtenerPrecio(codigo); // Corregido: usar obtenerPrecio en lugar de getPrecio
-                    double costo = p != null ? p : 0.0;
-                    modeloFactura.addRow(new Object[]{descripcion, String.format("%.2f", costo)});
-                    actualizarTotales();
+        filtroExamenField.getDocument().addDocumentListener(SimpleDocListener.onChange(this::filtrarExamenes));
+        filtroExamenField.addActionListener(e -> agregarExamenSeleccionado());
+        filtroExamenField.addKeyListener(new KeyAdapter() {
+            @Override
+            public void keyPressed(KeyEvent e) {
+                if (e.getKeyCode() == KeyEvent.VK_DOWN && tablaExamenes.getRowCount() > 0) {
+                    tablaExamenes.requestFocusInWindow();
+                    tablaExamenes.setRowSelectionInterval(0, 0);
+                } else if (e.getKeyCode() == KeyEvent.VK_ENTER) {
+                    agregarExamenSeleccionado();
+                    e.consume();
+                }
+            }
+        });
+
+        tablaExamenes.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                if (tablaExamenes.getSelectedRow() >= 0 && !seleccionProgramaticaExamen) {
+                    agregarExamenSeleccionado();
+                }
+            }
+        });
+        tablaExamenes.addKeyListener(new KeyAdapter() {
+            @Override
+            public void keyPressed(KeyEvent e) {
+                if (e.getKeyCode() == KeyEvent.VK_ENTER) {
+                    agregarExamenSeleccionado();
+                    e.consume();
                 }
             }
         });
@@ -607,6 +645,10 @@ public class VentanaDetallesOrdenes {
 
             String fecha = new java.text.SimpleDateFormat("dd/MM/yyyy").format(new java.util.Date());
             String hora = new java.text.SimpleDateFormat("HH:mm").format(new java.util.Date());
+            java.util.Map<String, String> datosPacienteExcel = PacienteExcelHelper.buscarPorCedula(cedula);
+            String codigoPaciente = obtenerCodigoPaciente(cedula, datosPacienteExcel);
+            String empresaSeleccionada = obtenerEmpresaSeleccionada();
+            String codigoEmpresa = obtenerCodigoEmpresa(cedula, empresaSeleccionada, ordenActual);
 
             // Verificar si estamos editando una orden existente o creando una nueva
             boolean esEdicion = ordenActual != null && ordenActual.getNumeroOrden() != null;
@@ -617,20 +659,20 @@ public class VentanaDetallesOrdenes {
                 
                 Orden orden = new Orden(
                         ordenActual.getNumeroOrden(), // Mantener el número de orden original
-                        "", // Factura N°
-                        "", // Control N°
-                        "", // Lote N°
+                        valorSeguro(ordenActual.getNumeroFactura()),
+                        valorSeguro(ordenActual.getNumeroControl()),
+                        valorSeguro(ordenActual.getNumeroLote()),
                         fecha,
                         hora,
-                        "", // Cod Paciente (no disponible)
+                        codigoPaciente,
                         cedula,
                         paciente.getNombre(),
                         paciente.getApellido(),
                         paciente.getDireccion(),
                         paciente.getTelefono(),
                         paciente.getCorreo(),
-                        "", // Cod Empresa
-                        (String) entidadCombo.getSelectedItem(),
+                        codigoEmpresa,
+                        empresaSeleccionada,
                         paciente.getSexo() != null ? paciente.getSexo() : "",
                         examenes,
                         total
@@ -701,15 +743,15 @@ public class VentanaDetallesOrdenes {
                     "", // Lote N°
                     fecha,
                     hora,
-                    "", // Cod Paciente (no disponible)
+                    codigoPaciente,
                     cedula,
                     paciente.getNombre(),
                     paciente.getApellido(),
                     paciente.getDireccion(),
                     paciente.getTelefono(),
                     paciente.getCorreo(),
-                    "", // Cod Empresa
-                    (String) entidadCombo.getSelectedItem(),
+                    codigoEmpresa,
+                    empresaSeleccionada,
                     paciente.getSexo() != null ? paciente.getSexo() : "",
                     examenes,
                     total
@@ -801,6 +843,49 @@ public class VentanaDetallesOrdenes {
         frame.setVisible(true);
     }
 
+    private String obtenerEmpresaSeleccionada() {
+        Object seleccion = entidadCombo != null ? entidadCombo.getSelectedItem() : null;
+        String empresa = seleccion != null ? seleccion.toString().trim() : "";
+        return "-- Seleccionar --".equalsIgnoreCase(empresa) ? "" : empresa;
+    }
+
+    private String obtenerCodigoPaciente(String cedula, java.util.Map<String, String> datosPacienteExcel) {
+        Paciente paciente = GestorPacientes.buscarPorCedula(cedula);
+        if (paciente != null && paciente.getCodigo() != null && !paciente.getCodigo().isBlank()) {
+            return paciente.getCodigo();
+        }
+        if (ordenActual != null && ordenActual.getCodigoPaciente() != null && !ordenActual.getCodigoPaciente().isBlank()) {
+            return ordenActual.getCodigoPaciente();
+        }
+        return datosPacienteExcel.getOrDefault("codigo", "").trim();
+    }
+
+    private String obtenerCodigoEmpresa(String cedula, String empresaSeleccionada, Orden ordenExistente) {
+        if (ordenExistente != null && ordenExistente.getCodigoEmpresa() != null && !ordenExistente.getCodigoEmpresa().isBlank()) {
+            return ordenExistente.getCodigoEmpresa();
+        }
+        if (empresaSeleccionada == null || empresaSeleccionada.isBlank()) {
+            return "";
+        }
+
+        String rif = rifField != null && rifField.getText() != null ? rifField.getText().trim() : "";
+        if (rif.isBlank()) {
+            return "";
+        }
+        return normalizarDocumento(rif).equals(normalizarDocumento(cedula)) ? "" : rif;
+    }
+
+    private String normalizarDocumento(String valor) {
+        if (valor == null) {
+            return "";
+        }
+        return valor.replaceAll("[^A-Za-z0-9]", "").toUpperCase();
+    }
+
+    private String valorSeguro(String valor) {
+        return valor != null ? valor : "";
+    }
+
     // ✅ Método nuevo para recibir cédula desde VentanaRegistroPacientes
     public void setCedulaPaciente(String cedula) {
         if (cedula == null || cedula.trim().isEmpty()) return;
@@ -882,12 +967,33 @@ public class VentanaDetallesOrdenes {
             telefonoField.setText(paciente.getTelefono() != null ? paciente.getTelefono() : "");
             correoField.setText(paciente.getCorreo() != null ? paciente.getCorreo() : "");
             rifField.setText(paciente.getCedula() != null ? paciente.getCedula() : "");
-            edadField.setText(paciente.getEdad() > 0 ? String.valueOf(paciente.getEdad()) : "");
+            edadField.setText(obtenerEdadPaciente(paciente, paciente.getCedula()));
             // El sexo se guardará automáticamente cuando se guarde la orden desde el paciente
             System.out.println("✅ Datos del paciente cargados: " + paciente.getNombre() + " " + paciente.getApellido() + " (Sexo: " + paciente.getSexo() + ")");
         } catch (Exception e) {
             System.err.println("❌ Error al cargar campos del paciente: " + e.getMessage());
             e.printStackTrace();
+        }
+    }
+
+    private void verificarEdadPaciente(Paciente paciente) {
+        String edadActual = edadField != null && edadField.getText() != null
+                ? edadField.getText().trim()
+                : "";
+        if (!edadActual.isEmpty()) {
+            return;
+        }
+
+        int opcion = JOptionPane.showConfirmDialog(
+                frame,
+                "Este paciente no tiene edad o fecha de nacimiento registrada.\n¿Desea completarla ahora?",
+                "Edad no registrada",
+                JOptionPane.YES_NO_OPTION,
+                JOptionPane.WARNING_MESSAGE
+        );
+        if (opcion == JOptionPane.YES_OPTION) {
+            VentanaRegistroPacientes ventanaRegistro = new VentanaRegistroPacientes(paciente, this);
+            ventanaRegistro.mostrar();
         }
     }
 
@@ -960,7 +1066,97 @@ public class VentanaDetallesOrdenes {
         telefonoField.setText(p.getTelefono());
         correoField.setText(p.getCorreo());
         rifField.setText(p.getCedula());
-        edadField.setText(String.valueOf(p.getEdad()));
+        edadField.setText(obtenerEdadPaciente(p, p.getCedula()));
+    }
+
+    private void filtrarExamenes() {
+        if (sorterExamenes == null || filtroExamenField == null) {
+            return;
+        }
+
+        String texto = filtroExamenField.getText() != null ? filtroExamenField.getText().trim() : "";
+        if (texto.isEmpty()) {
+            sorterExamenes.setRowFilter(null);
+        } else {
+            String termino = java.util.regex.Pattern.quote(texto);
+            sorterExamenes.setRowFilter(javax.swing.RowFilter.regexFilter("(?i)" + termino, 0, 1));
+        }
+        resaltarPrimerExamenVisible();
+    }
+
+    private void resaltarPrimerExamenVisible() {
+        if (tablaExamenes == null) {
+            return;
+        }
+        seleccionProgramaticaExamen = true;
+        try {
+            if (tablaExamenes.getRowCount() > 0) {
+                tablaExamenes.setRowSelectionInterval(0, 0);
+                tablaExamenes.scrollRectToVisible(tablaExamenes.getCellRect(0, 1, true));
+            } else {
+                tablaExamenes.clearSelection();
+            }
+        } finally {
+            seleccionProgramaticaExamen = false;
+        }
+    }
+
+    private void agregarExamenSeleccionado() {
+        if (tablaExamenes == null) {
+            return;
+        }
+        int filaVista = tablaExamenes.getSelectedRow();
+        if (filaVista < 0) {
+            return;
+        }
+
+        int filaModelo = tablaExamenes.convertRowIndexToModel(filaVista);
+        String codigo = String.valueOf(tablaExamenes.getModel().getValueAt(filaModelo, 0));
+        String descripcion = String.valueOf(tablaExamenes.getModel().getValueAt(filaModelo, 1));
+        Double precio = ExamenDAO.obtenerPrecio(codigo);
+        double costo = precio != null ? precio : 0.0;
+        modeloFactura.addRow(new Object[]{descripcion, String.format("%.2f", costo)});
+        actualizarTotales();
+    }
+
+    private String obtenerEdadPaciente(Paciente paciente, String cedula) {
+        if (paciente != null) {
+            if (paciente.getEdad() > 0) {
+                return String.valueOf(paciente.getEdad());
+            }
+            if (paciente.getFechaNacimiento() != null) {
+                int edadCalculada = java.time.Period.between(
+                        paciente.getFechaNacimiento(),
+                        java.time.LocalDate.now()
+                ).getYears();
+                if (edadCalculada > 0) {
+                    return String.valueOf(edadCalculada);
+                }
+            }
+        }
+
+        java.util.Map<String, String> datosExcel = PacienteExcelHelper.buscarPorCedula(cedula);
+        String edadExcel = datosExcel.getOrDefault("edad", "").trim();
+        if (!edadExcel.isEmpty() && !"0".equals(edadExcel)) {
+            return edadExcel;
+        }
+
+        String fechaNacimiento = datosExcel.getOrDefault("fechaNacimiento", "").trim();
+        if (!fechaNacimiento.isEmpty()) {
+            try {
+                java.time.LocalDate fecha = java.time.LocalDate.parse(
+                        fechaNacimiento,
+                        java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy")
+                );
+                int edadCalculada = java.time.Period.between(fecha, java.time.LocalDate.now()).getYears();
+                if (edadCalculada > 0) {
+                    return String.valueOf(edadCalculada);
+                }
+            } catch (Exception ignored) {
+            }
+        }
+
+        return "";
     }
 
     private int parseEnteroSeguro(String texto) {
@@ -978,7 +1174,7 @@ public class VentanaDetallesOrdenes {
         rifField.setText("");
         edadField.setText("");
         if (entidadCombo != null && entidadCombo.getItemCount() > 0) {
-            entidadCombo.setSelectedIndex(-1);
+            entidadCombo.setSelectedIndex(0);
         }
         // Limpiar factura y totales mínimos para nueva orden
         if (modeloFactura != null) {

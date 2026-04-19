@@ -7,7 +7,6 @@ import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
 import java.time.LocalDate;
-import java.time.format.DateTimeFormatter;
 
 /**
  * Data Access Object para gestionar operaciones CRUD de Pacientes en PostgreSQL
@@ -18,26 +17,36 @@ public class PacienteDAO {
      * Inserta un nuevo paciente en la base de datos
      */
     public static boolean insertar(Paciente paciente) {
-        String sql = "INSERT INTO pacientes (cedula, nombre, apellido, edad, fecha_nacimiento, direccion, telefono, correo, sexo) " +
-                     "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        String sql = "INSERT INTO pacientes (cedula, codigo, nombre, apellido, edad, fecha_nacimiento, direccion, telefono, correo, sexo, sede, categoria, dedicacion, estatus, fecha_ingreso) " +
+                     "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
         
         try (Connection conn = ConexionPostgreSQL.obtenerConexion();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
             
             pstmt.setString(1, paciente.getCedula());
-            pstmt.setString(2, paciente.getNombre());
-            pstmt.setString(3, paciente.getApellido());
-            pstmt.setInt(4, paciente.getEdad());
+            pstmt.setString(2, paciente.getCodigo());
+            pstmt.setString(3, paciente.getNombre());
+            pstmt.setString(4, paciente.getApellido());
+            pstmt.setInt(5, paciente.getEdad());
             // �� Guardar fecha de nacimiento
             if (paciente.getFechaNacimiento() != null) {
-                pstmt.setDate(5, java.sql.Date.valueOf(paciente.getFechaNacimiento()));
+                pstmt.setDate(6, java.sql.Date.valueOf(paciente.getFechaNacimiento()));
             } else {
-                pstmt.setDate(5, null);
+                pstmt.setDate(6, null);
             }
-            pstmt.setString(6, paciente.getDireccion());
-            pstmt.setString(7, paciente.getTelefono());
-            pstmt.setString(8, paciente.getCorreo());
-            pstmt.setString(9, convertirSexo(paciente.getSexo()));
+            pstmt.setString(7, paciente.getDireccion());
+            pstmt.setString(8, paciente.getTelefono());
+            pstmt.setString(9, paciente.getCorreo());
+            pstmt.setString(10, convertirSexo(paciente.getSexo()));
+            pstmt.setString(11, paciente.getSede());
+            pstmt.setString(12, paciente.getCategoria());
+            pstmt.setString(13, paciente.getDedicacion());
+            pstmt.setString(14, paciente.getEstatus());
+            if (paciente.getFechaIngreso() != null) {
+                pstmt.setDate(15, java.sql.Date.valueOf(paciente.getFechaIngreso()));
+            } else {
+                pstmt.setDate(15, null);
+            }
             
             int filas = pstmt.executeUpdate();
             return filas > 0;
@@ -52,25 +61,35 @@ public class PacienteDAO {
      * Actualiza un paciente existente
      */
     public static boolean actualizar(Paciente paciente) {
-        String sql = "UPDATE pacientes SET nombre = ?, apellido = ?, edad = ?, fecha_nacimiento = ?, direccion = ?, telefono = ?, correo = ?, sexo = ? WHERE cedula = ?";
+        String sql = "UPDATE pacientes SET codigo = ?, nombre = ?, apellido = ?, edad = ?, fecha_nacimiento = ?, direccion = ?, telefono = ?, correo = ?, sexo = ?, sede = ?, categoria = ?, dedicacion = ?, estatus = ?, fecha_ingreso = ? WHERE cedula = ?";
         
         try (Connection conn = ConexionPostgreSQL.obtenerConexion();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
             
-            pstmt.setString(1, paciente.getNombre());
-            pstmt.setString(2, paciente.getApellido());
-            pstmt.setInt(3, paciente.getEdad());
+            pstmt.setString(1, paciente.getCodigo());
+            pstmt.setString(2, paciente.getNombre());
+            pstmt.setString(3, paciente.getApellido());
+            pstmt.setInt(4, paciente.getEdad());
             // 🆕 Actualizar fecha de nacimiento
             if (paciente.getFechaNacimiento() != null) {
-                pstmt.setDate(4, java.sql.Date.valueOf(paciente.getFechaNacimiento()));
+                pstmt.setDate(5, java.sql.Date.valueOf(paciente.getFechaNacimiento()));
             } else {
-                pstmt.setDate(4, null);
+                pstmt.setDate(5, null);
             }
-            pstmt.setString(5, paciente.getDireccion());
-            pstmt.setString(6, paciente.getTelefono());
-            pstmt.setString(7, paciente.getCorreo());
-            pstmt.setString(8, convertirSexo(paciente.getSexo()));
-            pstmt.setString(9, paciente.getCedula());
+            pstmt.setString(6, paciente.getDireccion());
+            pstmt.setString(7, paciente.getTelefono());
+            pstmt.setString(8, paciente.getCorreo());
+            pstmt.setString(9, convertirSexo(paciente.getSexo()));
+            pstmt.setString(10, paciente.getSede());
+            pstmt.setString(11, paciente.getCategoria());
+            pstmt.setString(12, paciente.getDedicacion());
+            pstmt.setString(13, paciente.getEstatus());
+            if (paciente.getFechaIngreso() != null) {
+                pstmt.setDate(14, java.sql.Date.valueOf(paciente.getFechaIngreso()));
+            } else {
+                pstmt.setDate(14, null);
+            }
+            pstmt.setString(15, paciente.getCedula());
             
             int filas = pstmt.executeUpdate();
             return filas > 0;
@@ -195,7 +214,7 @@ public class PacienteDAO {
             fechaNacimiento = null;
         }
         
-        return new Paciente(
+        Paciente paciente = new Paciente(
             rs.getString("cedula"),
             rs.getString("nombre"),
             rs.getString("apellido"),
@@ -206,6 +225,19 @@ public class PacienteDAO {
             rs.getString("correo"),
             sexo
         );
+
+        try { paciente.setCodigo(rs.getString("codigo")); } catch (SQLException ignored) {}
+        try { paciente.setSede(rs.getString("sede")); } catch (SQLException ignored) {}
+        try { paciente.setCategoria(rs.getString("categoria")); } catch (SQLException ignored) {}
+        try { paciente.setDedicacion(rs.getString("dedicacion")); } catch (SQLException ignored) {}
+        try { paciente.setEstatus(rs.getString("estatus")); } catch (SQLException ignored) {}
+        try {
+            java.sql.Date fechaIngresoSql = rs.getDate("fecha_ingreso");
+            if (fechaIngresoSql != null) {
+                paciente.setFechaIngreso(fechaIngresoSql.toLocalDate());
+            }
+        } catch (SQLException ignored) {}
+        return paciente;
     }
 
     /**

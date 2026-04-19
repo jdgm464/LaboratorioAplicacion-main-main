@@ -33,10 +33,6 @@ import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.ss.usermodel.WorkbookFactory;
 
-import java.time.LocalDate;
-import java.time.format.DateTimeFormatter;
-
-
 public class VentanaPacientes {
     // Persistir qué filas (por clave) se han ocultado voluntariamente
     private static final String OCULTOS_FILE = "pacientes_ocultos.properties";
@@ -57,8 +53,8 @@ public class VentanaPacientes {
             List<Paciente> pacientes = GestorPacientes.cargarPacientes();
             
             for (Paciente p : pacientes) {
-                Object[] fila = new Object[16];
-                fila[0] = ""; // Código (no disponible en BD)
+                Object[] fila = new Object[15];
+                fila[0] = p.getCodigo() != null ? p.getCodigo() : "";
                 fila[1] = p.getNombre() != null ? p.getNombre() : "";
                 fila[2] = p.getApellido() != null ? p.getApellido() : "";
                 fila[3] = p.getCedula() != null ? p.getCedula() : "";
@@ -68,13 +64,12 @@ public class VentanaPacientes {
                 fila[6] = p.getSexo() != null && !p.getSexo().trim().isEmpty() ? p.getSexo() : "";
                 fila[7] = p.getDireccion() != null ? p.getDireccion() : "";
                 fila[8] = p.getTelefono() != null ? p.getTelefono() : "";
-                fila[9] = ""; // Teléfono2 (no disponible en BD)
-                fila[10] = ""; // Sede (no disponible en BD)
-                fila[11] = ""; // Categoría (no disponible en BD)
-                fila[12] = ""; // Dedicación (no disponible en BD)
-                fila[13] = ""; // Estatus (no disponible en BD)
-                fila[14] = ""; // Fecha Ingreso (no disponible en BD)
-                fila[15] = p.getCorreo() != null ? p.getCorreo() : "";
+                fila[9] = p.getSede() != null ? p.getSede() : "";
+                fila[10] = p.getCategoria() != null ? p.getCategoria() : "";
+                fila[11] = p.getDedicacion() != null ? p.getDedicacion() : "";
+                fila[12] = p.getEstatus() != null ? p.getEstatus() : "";
+                fila[13] = p.getFechaIngreso() != null ? p.getFechaIngreso().format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy")) : "";
+                fila[14] = p.getCorreo() != null ? p.getCorreo() : "";
                 
                 // Aplicar filtros de búsqueda actuales
                 if (!filaCumpleFiltros(fila)) continue;
@@ -119,13 +114,28 @@ public class VentanaPacientes {
                         String cedulaTablaNorm = normalizarCedula(cedulaTabla.toString());
                         if (cedulaBD.equals(cedulaTablaNorm)) {
                             filaExistente = i;
-                            // Verificar si necesita actualización (nombres o apellidos vacíos)
+                            // Verificar si necesita actualización por datos importantes vacíos
                             Object nombreActual = modeloTabla.getValueAt(i, 1);
                             Object apellidoActual = modeloTabla.getValueAt(i, 2);
+                            Object fechaNacActual = modeloTabla.getValueAt(i, 4);
+                            Object edadActual = modeloTabla.getValueAt(i, 5);
+                            Object sexoActual = modeloTabla.getValueAt(i, 6);
+                            Object direccionActual = modeloTabla.getValueAt(i, 7);
+                            Object telefonoActual = modeloTabla.getValueAt(i, 8);
+                            Object correoActual = modeloTabla.getValueAt(i, 14);
                             String nombreStr = nombreActual != null ? nombreActual.toString().trim() : "";
                             String apellidoStr = apellidoActual != null ? apellidoActual.toString().trim() : "";
+                            String fechaNacStr = fechaNacActual != null ? fechaNacActual.toString().trim() : "";
+                            String edadStr = edadActual != null ? edadActual.toString().trim() : "";
+                            String sexoStr = sexoActual != null ? sexoActual.toString().trim() : "";
+                            String direccionStr = direccionActual != null ? direccionActual.toString().trim() : "";
+                            String telefonoStr = telefonoActual != null ? telefonoActual.toString().trim() : "";
+                            String correoStr = correoActual != null ? correoActual.toString().trim() : "";
                             
-                            if (nombreStr.isEmpty() || apellidoStr.isEmpty()) {
+                            if (nombreStr.isEmpty() || apellidoStr.isEmpty() || fechaNacStr.isEmpty()
+                                    || edadStr.isEmpty() || sexoStr.isEmpty()
+                                    || direccionStr.isEmpty() || telefonoStr.isEmpty()
+                                    || correoStr.isEmpty()) {
                                 necesitaActualizacion = true;
                             }
                             break;
@@ -138,13 +148,25 @@ public class VentanaPacientes {
                     // Actualizar solo los campos que están vacíos o faltantes
                     Object nombreActual = modeloTabla.getValueAt(filaExistente, 1);
                     Object apellidoActual = modeloTabla.getValueAt(filaExistente, 2);
+                    Object codigoActual = modeloTabla.getValueAt(filaExistente, 0);
+                    Object fechaNacimientoActual = modeloTabla.getValueAt(filaExistente, 4);
                     Object direccionActual = modeloTabla.getValueAt(filaExistente, 7);
                     Object telefonoActual = modeloTabla.getValueAt(filaExistente, 8);
-                    Object correoActual = modeloTabla.getValueAt(filaExistente, 15);
+                    Object correoActual = modeloTabla.getValueAt(filaExistente, 14);
                     Object edadActual = modeloTabla.getValueAt(filaExistente, 5);
                     Object sexoActual = modeloTabla.getValueAt(filaExistente, 6);
+                    Object sedeActual = modeloTabla.getValueAt(filaExistente, 9);
+                    Object categoriaActual = modeloTabla.getValueAt(filaExistente, 10);
+                    Object dedicacionActual = modeloTabla.getValueAt(filaExistente, 11);
+                    Object estatusActual = modeloTabla.getValueAt(filaExistente, 12);
+                    Object fechaIngresoActual = modeloTabla.getValueAt(filaExistente, 13);
                     
                     // Actualizar nombre si está vacío
+                    if ((codigoActual == null || codigoActual.toString().trim().isEmpty()) &&
+                        p.getCodigo() != null && !p.getCodigo().trim().isEmpty()) {
+                        modeloTabla.setValueAt(p.getCodigo(), filaExistente, 0);
+                    }
+
                     if (nombreActual == null || nombreActual.toString().trim().isEmpty()) {
                         modeloTabla.setValueAt(p.getNombre() != null ? p.getNombre() : "", filaExistente, 1);
                     }
@@ -152,6 +174,15 @@ public class VentanaPacientes {
                     // Actualizar apellido si está vacío
                     if (apellidoActual == null || apellidoActual.toString().trim().isEmpty()) {
                         modeloTabla.setValueAt(p.getApellido() != null ? p.getApellido() : "", filaExistente, 2);
+                    }
+
+                    if ((fechaNacimientoActual == null || fechaNacimientoActual.toString().trim().isEmpty())
+                        && p.getFechaNacimiento() != null) {
+                        modeloTabla.setValueAt(
+                            p.getFechaNacimiento().format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy")),
+                            filaExistente,
+                            4
+                        );
                     }
                     
                     // Actualizar otros campos si están vacíos y hay datos en BD
@@ -167,7 +198,7 @@ public class VentanaPacientes {
                     
                     if ((correoActual == null || correoActual.toString().trim().isEmpty()) && 
                         p.getCorreo() != null && !p.getCorreo().trim().isEmpty()) {
-                        modeloTabla.setValueAt(p.getCorreo(), filaExistente, 15);
+                        modeloTabla.setValueAt(p.getCorreo(), filaExistente, 14);
                     }
                     
                     if ((edadActual == null || edadActual.toString().trim().isEmpty()) && 
@@ -179,11 +210,40 @@ public class VentanaPacientes {
                         p.getSexo() != null && !p.getSexo().trim().isEmpty()) {
                         modeloTabla.setValueAt(p.getSexo(), filaExistente, 6);
                     }
+
+                    if ((sedeActual == null || sedeActual.toString().trim().isEmpty()) &&
+                        p.getSede() != null && !p.getSede().trim().isEmpty()) {
+                        modeloTabla.setValueAt(p.getSede(), filaExistente, 9);
+                    }
+
+                    if ((categoriaActual == null || categoriaActual.toString().trim().isEmpty()) &&
+                        p.getCategoria() != null && !p.getCategoria().trim().isEmpty()) {
+                        modeloTabla.setValueAt(p.getCategoria(), filaExistente, 10);
+                    }
+
+                    if ((dedicacionActual == null || dedicacionActual.toString().trim().isEmpty()) &&
+                        p.getDedicacion() != null && !p.getDedicacion().trim().isEmpty()) {
+                        modeloTabla.setValueAt(p.getDedicacion(), filaExistente, 11);
+                    }
+
+                    if ((estatusActual == null || estatusActual.toString().trim().isEmpty()) &&
+                        p.getEstatus() != null && !p.getEstatus().trim().isEmpty()) {
+                        modeloTabla.setValueAt(p.getEstatus(), filaExistente, 12);
+                    }
+
+                    if ((fechaIngresoActual == null || fechaIngresoActual.toString().trim().isEmpty()) &&
+                        p.getFechaIngreso() != null) {
+                        modeloTabla.setValueAt(
+                            p.getFechaIngreso().format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy")),
+                            filaExistente,
+                            13
+                        );
+                    }
                 }
                 // Si no existe, agregarlo
                 else if (filaExistente < 0) {
-                    Object[] fila = new Object[16];
-                    fila[0] = ""; // Código
+                    Object[] fila = new Object[15];
+                    fila[0] = p.getCodigo() != null ? p.getCodigo() : "";
                     fila[1] = p.getNombre() != null ? p.getNombre() : "";
                     fila[2] = p.getApellido() != null ? p.getApellido() : "";
                     fila[3] = p.getCedula() != null ? p.getCedula() : "";
@@ -193,13 +253,12 @@ public class VentanaPacientes {
                     fila[6] = p.getSexo() != null && !p.getSexo().trim().isEmpty() ? p.getSexo() : "";
                     fila[7] = p.getDireccion() != null ? p.getDireccion() : "";
                     fila[8] = p.getTelefono() != null ? p.getTelefono() : "";
-                    fila[9] = ""; // Teléfono2
-                    fila[10] = ""; // Sede
-                    fila[11] = ""; // Categoría
-                    fila[12] = ""; // Dedicación
-                    fila[13] = ""; // Estatus
-                    fila[14] = ""; // Fecha Ingreso
-                    fila[15] = p.getCorreo() != null ? p.getCorreo() : "";
+                    fila[9] = p.getSede() != null ? p.getSede() : "";
+                    fila[10] = p.getCategoria() != null ? p.getCategoria() : "";
+                    fila[11] = p.getDedicacion() != null ? p.getDedicacion() : "";
+                    fila[12] = p.getEstatus() != null ? p.getEstatus() : "";
+                    fila[13] = p.getFechaIngreso() != null ? p.getFechaIngreso().format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy")) : "";
+                    fila[14] = p.getCorreo() != null ? p.getCorreo() : "";
                     
                     // Aplicar filtros de búsqueda actuales
                     if (!filaCumpleFiltros(fila)) continue;
@@ -273,7 +332,7 @@ public class VentanaPacientes {
         panel.add(panelBusqueda, BorderLayout.NORTH);
 
         // ------------------ TABLA CENTRAL ------------------
-    String[] columnas = {"Código", "Nombres", "Apellidos", "Cédula", "Fecha Nacimiento", "Edad", "Sexo", "Dirección", "Teléfono1", "Teléfono2", "Sede", "Categoría", "Dedicación", "Estatus", "Fecha Ingreso", "Email"};
+    String[] columnas = {"Código", "Nombres", "Apellidos", "Cédula", "Fecha Nacimiento", "Edad", "Sexo", "Dirección", "Teléfono", "Sede", "Categoría", "Dedicación", "Estatus", "Fecha Ingreso", "Email"};
         modeloTabla = new DefaultTableModel(columnas, 0);
         tablaPacientes = new JTable(modeloTabla);
         JScrollPane scrollPane = new JScrollPane(tablaPacientes);
@@ -450,7 +509,7 @@ public class VentanaPacientes {
                 Row row = sheet.getRow(i);
                 if (row == null) continue;
 
-                Object[] fila = new Object[16];
+                Object[] fila = new Object[15];
                 fila[0]  = leerCelda(row, idx.apply("codigo"), false, true);
                 fila[1]  = leerCelda(row, idx.apply("nombres"), false, false);
                 fila[2]  = leerCelda(row, idx.apply("apellidos"), false, false);
@@ -460,13 +519,12 @@ public class VentanaPacientes {
                 fila[6]  = leerCelda(row, idx.apply("sexo"), false, false);
                 fila[7]  = leerCelda(row, idx.apply("direccion"), false, false);
                 fila[8]  = leerCelda(row, idx.apply("telefono1"), false, true);
-                fila[9]  = leerCelda(row, idx.apply("telefono2"), false, true);
-                fila[10] = leerCelda(row, idx.apply("sede"), false, false);
-                fila[11] = leerCelda(row, idx.apply("categoria"), false, false);
-                fila[12] = leerCelda(row, idx.apply("dedicacion"), false, false);
-                fila[13] = leerCelda(row, idx.apply("estatus"), false, false);
-                fila[14] = leerCeldaFecha(row, idx.apply("fecha ingreso"), sdf);
-                fila[15] = leerCelda(row, idx.apply("email"), false, false);
+                fila[9]  = leerCelda(row, idx.apply("sede"), false, false);
+                fila[10] = leerCelda(row, idx.apply("categoria"), false, false);
+                fila[11] = leerCelda(row, idx.apply("dedicacion"), false, false);
+                fila[12] = leerCelda(row, idx.apply("estatus"), false, false);
+                fila[13] = leerCeldaFecha(row, idx.apply("fecha ingreso"), sdf);
+                fila[14] = leerCelda(row, idx.apply("email"), false, false);
 
                 // Aplicar filtros de búsqueda actuales
                 if (!filaCumpleFiltros(fila)) continue;
@@ -628,7 +686,7 @@ public class VentanaPacientes {
         if (fila >= 0) {
             // Construir clave de la fila y marcarla como oculta (persistente)
             Object[] datos = new Object[modeloTabla.getColumnCount()];
-            for (int c = 0; c < datos.length && c < 16; c++) {
+            for (int c = 0; c < datos.length && c < 15; c++) {
                 datos[c] = modeloTabla.getValueAt(fila, c);
             }
             String clave = construirClaveFila(datos);
